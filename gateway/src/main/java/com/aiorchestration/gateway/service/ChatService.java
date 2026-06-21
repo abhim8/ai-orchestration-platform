@@ -1,9 +1,10 @@
 package com.aiorchestration.gateway.service;
 
 import com.aiorchestration.gateway.model.ChatResponse;
+import com.aiorchestration.gateway.planner.DeterministicExecutionPlanFactory;
 import com.aiorchestration.gateway.planner.ExecutionPlanValidator;
 import com.aiorchestration.gateway.planner.IntentPlannerService;
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -17,16 +18,40 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ChatService {
 
     @Value("${planning.clarification-threshold}")
     private double clarificationThreshold;
 
+    @Value("${ai.planner.enabled}")
+    private boolean plannerEnabled;
+
     private final IntentPlannerService plannerService;
     private final ExecutionPlanValidator planValidator;
     private final ExecutionEngineService executionEngine;
     private final ResponseAggregatorService aggregator;
+    private final DeterministicExecutionPlanFactory fallbackPlanner;
+
+    public ChatService(final IntentPlannerService plannerService,
+                       final ExecutionPlanValidator planValidator,
+                       final ExecutionEngineService executionEngine,
+                       final ResponseAggregatorService aggregator,
+                       final DeterministicExecutionPlanFactory fallbackPlanner) {
+        this.plannerService = plannerService;
+        this.planValidator = planValidator;
+        this.executionEngine = executionEngine;
+        this.aggregator = aggregator;
+        this.fallbackPlanner = fallbackPlanner;
+    }
+
+    @PostConstruct
+    void logPlannerMode() {
+        if (plannerEnabled) {
+            log.info("AI planner enabled: true");
+        } else {
+            log.info("AI planner enabled: false (deterministic fallback mode)");
+        }
+    }
 
     /**
      * Processes a user chat request through the full pipeline:
@@ -39,9 +64,11 @@ public class ChatService {
     public ChatResponse chat(final String conversationId, final String message) {
         log.debug("Processing chat request for conversationId={}", conversationId);
 
-        var result = plannerService.plan(conversationId, message);
+        var result = plannerEnabled
+                ? plannerService.plan(conversationId, message)
+                : fallbackPlanner.createPlan(message);
 
-        if (result.confidence() < clarificationThreshold) {
+        if (plannerEnabled && result.confidence() < clarificationThreshold) {
             log.debug("Clarification needed: confidence={}", result.confidence());
             return new ChatResponse(
                     false,

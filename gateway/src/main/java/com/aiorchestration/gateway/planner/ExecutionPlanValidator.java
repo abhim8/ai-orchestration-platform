@@ -5,7 +5,9 @@ import com.aiorchestration.gateway.model.ExecutionPlan;
 import com.aiorchestration.gateway.model.ExecutionStep;
 import com.aiorchestration.gateway.model.PlanGenerationResult;
 import com.aiorchestration.gateway.registry.ToolRegistry;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
@@ -27,15 +29,13 @@ import java.util.*;
  * Time complexity: O(V + E) where V = steps, E = dependency edges.
  */
 @Slf4j
+@Component
+@RequiredArgsConstructor
 public class ExecutionPlanValidator {
 
     private static final double MINIMUM_CONFIDENCE = 0.5;
 
     private final ToolRegistry toolRegistry;
-
-    public ExecutionPlanValidator(final ToolRegistry toolRegistry) {
-        this.toolRegistry = toolRegistry;
-    }
 
     /**
      * Validates the given plan, throwing {@link PlanValidationException}

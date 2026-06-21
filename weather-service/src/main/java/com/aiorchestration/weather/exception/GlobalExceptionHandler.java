@@ -1,4 +1,4 @@
-package com.aiorchestration.gateway.exception;
+package com.aiorchestration.weather.exception;
 
 import com.aiorchestration.common.model.ErrorResponse;
 import com.aiorchestration.common.model.ValidationError;
@@ -91,29 +91,20 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
-    @ExceptionHandler(PlanValidationException.class)
-    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
-    @SuppressWarnings("deprecation")
-    public ErrorResponse handlePlanValidation(final PlanValidationException ex,
-                                               final HttpServletRequest request) {
-        log.warn("Plan validation failed: {}", ex.getMessage());
-        return buildErrorResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request);
+    @ExceptionHandler(LocationNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleLocationNotFound(final LocationNotFoundException ex,
+                                                 final HttpServletRequest request) {
+        log.warn("Location not found: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
-    @ExceptionHandler(PlanGenerationException.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ErrorResponse handlePlanGeneration(final PlanGenerationException ex,
-                                               final HttpServletRequest request) {
-        log.error("Plan generation failed: {}", ex.getMessage(), ex);
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Plan generation failed", request);
-    }
-
-    @ExceptionHandler(DownstreamServiceException.class)
+    @ExceptionHandler(ForecastRetrievalException.class)
     @ResponseStatus(HttpStatus.BAD_GATEWAY)
-    public ErrorResponse handleDownstreamService(final DownstreamServiceException ex,
+    public ErrorResponse handleForecastRetrieval(final ForecastRetrievalException ex,
                                                   final HttpServletRequest request) {
-        log.error("Downstream service error: {}", ex.getMessage(), ex);
-        return buildErrorResponse(HttpStatus.BAD_GATEWAY, "Downstream service error", request);
+        log.error("Forecast retrieval failed: {}", ex.getMessage(), ex);
+        return buildErrorResponse(HttpStatus.BAD_GATEWAY, "Weather service unavailable", request);
     }
 
     @ExceptionHandler(Exception.class)

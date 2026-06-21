@@ -1,5 +1,6 @@
 package com.aiorchestration.weather.client;
 
+import com.aiorchestration.weather.exception.ForecastRetrievalException;
 import com.aiorchestration.weather.exception.LocationNotFoundException;
 import com.aiorchestration.weather.model.WeatherForecastResponse;
 import com.aiorchestration.weather.model.openmeteo.ForecastResponse;
@@ -78,7 +79,7 @@ public class OpenMeteoClient {
 
         if (forecastResponse == null || forecastResponse.daily() == null) {
             log.warn("Failed to fetch forecast data for: {}", location);
-            throw new RuntimeException("Failed to fetch forecast data for: " + location);
+            throw new ForecastRetrievalException("Failed to fetch forecast data for: " + location);
         }
 
         var daily = forecastResponse.daily();

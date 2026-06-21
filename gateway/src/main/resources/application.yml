@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
@@ -10,9 +10,38 @@ spring:
         api-key: ${GEMINI_API_KEY}
         chat:
           model: gemini-2.0-flash
-
 flight-service:
-  base-url: http://localhost:8081
+  base-url: ${FLIGHT_SERVICE_BASE_URL:http://localhost:8081}
 
 weather-service:
-  base-url: http://localhost:8082
+  base-url: ${WEATHER_SERVICE_BASE_URL:http://localhost:8082}
+
+chat:
+  memory:
+    max-messages: ${CHAT_MEMORY_MAX_MESSAGES:30}
+
+planning:
+  clarification-threshold: ${PLANNING_CLARIFICATION_THRESHOLD:0.5}
+  minimum-confidence: ${PLANNING_MINIMUM_CONFIDENCE:0.5}
+
+logging:
+  level:
+    root: INFO
+    com.aiorchestration: DEBUG
+    org.springframework.ai: INFO
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

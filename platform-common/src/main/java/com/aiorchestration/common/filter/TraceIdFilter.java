@@ -25,7 +25,8 @@ public class TraceIdFilter extends OncePerRequestFilter {
                                     final HttpServletResponse response,
                                     final FilterChain chain) throws ServletException, IOException {
         var traceId = request.getHeader(TRACE_ID_HEADER);
-        if (traceId == null || traceId.isBlank()) {
+
+        if (!isValidUuid(traceId)) {
             traceId = UUID.randomUUID().toString();
         }
 
@@ -37,6 +38,19 @@ public class TraceIdFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
         } finally {
             MDC.clear();
+        }
+    }
+
+    private boolean isValidUuid(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+
+        try {
+            UUID.fromString(value);
+            return true;
+        } catch (IllegalArgumentException ex) {
+            return false;
         }
     }
 }

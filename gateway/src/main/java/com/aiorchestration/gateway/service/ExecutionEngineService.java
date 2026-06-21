@@ -63,6 +63,7 @@ public class ExecutionEngineService {
         log.debug("Starting execution of {} steps", plan.steps().size());
 
         var sorted = topologicalSort(plan.steps());
+        log.debug("Topological order: {}", sorted.stream().map(ExecutionStep::stepId).toList());
 
         var futures = new HashMap<String, CompletableFuture<StepResult>>();
 
@@ -105,21 +106,22 @@ public class ExecutionEngineService {
     }
 
     private StepResult executeSingleStep(final ExecutionStep step) {
+        var start = System.currentTimeMillis();
         log.debug("Executing step '{}' with tool '{}'", step.stepId(), step.tool());
 
         if (!toolRegistry.hasTool(step.tool())) {
+            var latency = System.currentTimeMillis() - start;
             return new StepResult(step.stepId(), step.tool(), StepStatus.FAILED,
-                    null, "Unknown tool: " + step.tool(), STEP_NOT_EXECUTED_LATENCY);
+                    null, "Unknown tool: " + step.tool(), latency);
         }
 
         var executor = toolExecutors.get(step.tool());
         if (executor == null) {
+            var latency = System.currentTimeMillis() - start;
             return new StepResult(step.stepId(), step.tool(), StepStatus.FAILED,
-                    null, "No executor registered for tool: " + step.tool(),
-                    STEP_NOT_EXECUTED_LATENCY);
+                    null, "No executor registered for tool: " + step.tool(), latency);
         }
 
-        var start = System.currentTimeMillis();
         try {
             var data = executor.execute(step.arguments());
             var latency = System.currentTimeMillis() - start;
@@ -127,7 +129,7 @@ public class ExecutionEngineService {
             return new StepResult(step.stepId(), step.tool(), StepStatus.SUCCESS, data, null, latency);
         } catch (Exception e) {
             var latency = System.currentTimeMillis() - start;
-            log.warn("Step '{}' failed: {}", step.stepId(), e.getMessage());
+            log.warn("Step '{}' failed after {}ms: {}", step.stepId(), latency, e.getMessage());
             return new StepResult(step.stepId(), step.tool(), StepStatus.FAILED, null, e.getMessage(), latency);
         }
     }

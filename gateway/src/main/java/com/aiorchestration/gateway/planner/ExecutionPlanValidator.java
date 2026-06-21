@@ -7,6 +7,7 @@ import com.aiorchestration.gateway.model.PlanGenerationResult;
 import com.aiorchestration.gateway.registry.ToolRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -33,7 +34,8 @@ import java.util.*;
 @RequiredArgsConstructor
 public class ExecutionPlanValidator {
 
-    private static final double MINIMUM_CONFIDENCE = 0.5;
+    @Value("${planning.minimum-confidence:0.5}")
+    private double minimumConfidence;
 
     private final ToolRegistry toolRegistry;
 
@@ -62,10 +64,10 @@ public class ExecutionPlanValidator {
     // ---- 1. Confidence threshold ----
 
     private void validateConfidence(final double confidence) {
-        if (confidence < MINIMUM_CONFIDENCE) {
-            log.warn("Validation failed: planner confidence {} is below minimum threshold {}", confidence, MINIMUM_CONFIDENCE);
+        if (confidence < minimumConfidence) {
+            log.warn("Validation failed: planner confidence {} is below minimum threshold {}", confidence, minimumConfidence);
             throw new PlanValidationException(
-                "Planner confidence " + confidence + " is below minimum threshold " + MINIMUM_CONFIDENCE
+                "Planner confidence " + confidence + " is below minimum threshold " + minimumConfidence
             );
         }
     }

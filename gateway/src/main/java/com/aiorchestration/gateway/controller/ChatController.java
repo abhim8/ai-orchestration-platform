@@ -25,7 +25,9 @@ public class ChatController {
 
     @PostMapping
     public ChatResponse chat(@RequestBody @Valid final ChatRequest request) {
-        log.info("Received chat request");
-        return chatService.chat(request);
+        log.debug("Received chat request: sessionId={}", request.sessionId());
+        var response = chatService.chat(request);
+        log.debug("Chat delegation completed: clarificationRequired={}", response.clarificationRequired());
+        return response;
     }
 }

@@ -8,6 +8,7 @@ import com.aiorchestration.gateway.registry.ToolRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,7 @@ class ExecutionPlanValidatorTest {
     void setUp() {
         toolRegistry = new ToolRegistry();
         validator = new ExecutionPlanValidator(toolRegistry);
+        ReflectionTestUtils.setField(validator, "minimumConfidence", 0.5);
     }
 
     private static PlanGenerationResult validResult(final ExecutionPlan plan) {
@@ -357,6 +359,7 @@ class ExecutionPlanValidatorTest {
         var customTools = Map.of("custom.tool", Set.of("arg1"));
         var customRegistry = new ToolRegistry(customTools);
         var customValidator = new ExecutionPlanValidator(customRegistry);
+        ReflectionTestUtils.setField(customValidator, "minimumConfidence", 0.5);
 
         var steps = List.of(
             step("1", "custom.tool", Map.of("arg1", "value1"), List.of())
@@ -372,6 +375,7 @@ class ExecutionPlanValidatorTest {
         var customTools = Map.of("custom.tool", Set.of("requiredArg"));
         var customRegistry = new ToolRegistry(customTools);
         var customValidator = new ExecutionPlanValidator(customRegistry);
+        ReflectionTestUtils.setField(customValidator, "minimumConfidence", 0.5);
 
         var steps = List.of(
             step("1", "custom.tool", Map.of(), List.of())

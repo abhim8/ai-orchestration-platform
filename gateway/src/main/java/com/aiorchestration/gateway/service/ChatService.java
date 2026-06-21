@@ -6,6 +6,7 @@ import com.aiorchestration.gateway.planner.ExecutionPlanValidator;
 import com.aiorchestration.gateway.planner.IntentPlannerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,7 +21,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ChatService {
 
-    private static final double CLARIFICATION_THRESHOLD = 0.5;
+    @Value("${planning.clarification-threshold:0.5}")
+    private double clarificationThreshold;
 
     private final IntentPlannerService plannerService;
     private final ExecutionPlanValidator planValidator;
@@ -39,8 +41,8 @@ public class ChatService {
 
         var result = plannerService.plan(request);
 
-        if (result.confidence() < CLARIFICATION_THRESHOLD) {
-            log.info("Clarification needed: confidence={}", result.confidence());
+        if (result.confidence() < clarificationThreshold) {
+            log.debug("Clarification needed: confidence={}", result.confidence());
             return new ChatResponse(
                     false,
                     List.of(),

@@ -136,8 +136,36 @@
                         </excludes>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <configuration>
+                        <argLine>${required.jvm.args}</argLine>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
+
+    <profiles>
+        <profile>
+            <id>java26</id>
+            <activation>
+                <jdk>[26,)</jdk>
+            </activation>
+            <properties>
+                <required.jvm.args>-Dnet.bytebuddy.experimental=true</required.jvm.args>
+            </properties>
+        </profile>
+        <profile>
+            <id>default-java</id>
+            <activation>
+                <jdk>(,26)</jdk>
+            </activation>
+            <properties>
+                <required.jvm.args></required.jvm.args>
+            </properties>
+        </profile>
+    </profiles>
 
 </project>

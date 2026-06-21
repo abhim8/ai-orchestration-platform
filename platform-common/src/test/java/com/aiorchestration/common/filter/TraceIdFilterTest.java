@@ -19,6 +19,8 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class TraceIdFilterTest {
 
+    private static final String VALID_TRACE_ID = "550e8400-e29b-41d4-a716-446655440000";
+
     private TraceIdFilter filter;
 
     @Mock
@@ -35,15 +37,15 @@ class TraceIdFilterTest {
     @Test
     @DisplayName("should use X-Trace-Id from request when present")
     void shouldUseExistingTraceId() throws Exception {
-        when(request.getHeader("X-Trace-Id")).thenReturn("existing-trace-id");
+        when(request.getHeader("X-Trace-Id")).thenReturn(VALID_TRACE_ID);
 
         final String[] captured = new String[1];
         filter.doFilterInternal(request, response, (req, res) -> {
             captured[0] = MDC.get("traceId");
         });
 
-        assertEquals("existing-trace-id", captured[0]);
-        verify(response).setHeader("X-Trace-Id", "existing-trace-id");
+        assertEquals(VALID_TRACE_ID, captured[0]);
+        verify(response).setHeader("X-Trace-Id", VALID_TRACE_ID);
     }
 
     @Test
@@ -77,10 +79,10 @@ class TraceIdFilterTest {
     @Test
     @DisplayName("should clear MDC after request completes")
     void shouldClearMdcAfterRequest() throws Exception {
-        when(request.getHeader("X-Trace-Id")).thenReturn("trace-123");
+        when(request.getHeader("X-Trace-Id")).thenReturn(VALID_TRACE_ID);
 
         filter.doFilterInternal(request, response, (req, res) -> {
-            assertEquals("trace-123", MDC.get("traceId"));
+            assertEquals(VALID_TRACE_ID, MDC.get("traceId"));
         });
 
         assertNull(MDC.get("traceId"));
@@ -89,7 +91,7 @@ class TraceIdFilterTest {
     @Test
     @DisplayName("should clear MDC even when chain throws exception")
     void shouldClearMdcOnException() {
-        when(request.getHeader("X-Trace-Id")).thenReturn("trace-123");
+        when(request.getHeader("X-Trace-Id")).thenReturn(VALID_TRACE_ID);
 
         try {
             filter.doFilterInternal(request, response, (req, res) -> {

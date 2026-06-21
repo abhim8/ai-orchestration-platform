@@ -12,6 +12,7 @@ import com.aiorchestration.gateway.planner.IntentPlannerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -50,6 +51,7 @@ class ChatServiceTest {
     @BeforeEach
     void setUp() {
         chatService = new ChatService(plannerService, planValidator, executionEngine, aggregator);
+        ReflectionTestUtils.setField(chatService, "clarificationThreshold", 0.5);
         request = new ChatRequest(SESSION_ID, MESSAGE);
     }
 

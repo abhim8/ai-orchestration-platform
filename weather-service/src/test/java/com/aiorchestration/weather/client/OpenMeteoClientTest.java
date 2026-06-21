@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
@@ -45,6 +46,8 @@ class OpenMeteoClientTest {
         when(restClient.get()).thenReturn(requestSpec);
         when(requestSpec.retrieve()).thenReturn(responseSpec);
         client = new OpenMeteoClient(restClientBuilder);
+        ReflectionTestUtils.setField(client, "geocodingUrl", "https://geocoding-api.open-meteo.com/v1/search");
+        ReflectionTestUtils.setField(client, "forecastUrl", "https://api.open-meteo.com/v1/forecast");
     }
 
     private void stubGeocoding(final GeocodingResponse response) {

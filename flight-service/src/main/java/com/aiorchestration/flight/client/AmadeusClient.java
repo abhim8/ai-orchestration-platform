@@ -35,7 +35,7 @@ public class AmadeusClient {
     public FlightSearchResponse search(final String origin,
                                        final String destination,
                                        final LocalDate departureDate) {
-        log.info("[MOCK][AMADEUS] origin={} destination={} departureDate={}",
+        log.debug("[MOCK][AMADEUS] origin={} destination={} departureDate={}",
                 origin, destination, departureDate);
 
         var flights = List.of(

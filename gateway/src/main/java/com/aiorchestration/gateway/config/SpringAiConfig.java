@@ -7,6 +7,7 @@ import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.converter.BeanOutputConverter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -34,11 +35,14 @@ public class SpringAiConfig {
         return new BeanOutputConverter<>(PlanGenerationResult.class);
     }
 
+    @Value("${chat.memory.max-messages:30}")
+    private int maxMessages;
+
     @Bean
     public ChatMemory chatMemory() {
-        log.info("Creating in-memory ChatMemory (JVM-local, lost on restart)");
+        log.info("Creating in-memory ChatMemory with maxMessages={} (JVM-local, lost on restart)", maxMessages);
         return MessageWindowChatMemory.builder()
-                .maxMessages(30)
+                .maxMessages(maxMessages)
                 .build();
     }
 

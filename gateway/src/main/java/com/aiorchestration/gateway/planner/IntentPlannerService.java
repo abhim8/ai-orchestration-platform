@@ -66,7 +66,7 @@ public class IntentPlannerService {
             log.debug("Plan generated successfully with confidence: {}", result.confidence());
             return result;
         } catch (Exception e) {
-            log.error("AI planning failed", e);
+            log.warn("AI planning failed: {}", e.getMessage());
             throw new PlanGenerationException("Failed to generate execution plan", e);
         }
     }

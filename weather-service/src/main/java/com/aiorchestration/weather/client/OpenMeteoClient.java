@@ -6,6 +6,7 @@ import com.aiorchestration.weather.model.WeatherForecastResponse;
 import com.aiorchestration.weather.model.openmeteo.ForecastResponse;
 import com.aiorchestration.weather.model.openmeteo.GeocodingResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -29,8 +30,11 @@ import java.util.List;
 @Component
 public class OpenMeteoClient {
 
-    private static final String GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
-    private static final String FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
+    @Value("${open-meteo.geocoding-url:https://geocoding-api.open-meteo.com/v1/search}")
+    private String geocodingUrl;
+
+    @Value("${open-meteo.forecast-url:https://api.open-meteo.com/v1/forecast}")
+    private String forecastUrl;
 
     private final RestClient restClient;
 
@@ -50,7 +54,7 @@ public class OpenMeteoClient {
         log.debug("Resolving coordinates for location: {}", location);
 
         var geoResponse = restClient.get()
-                .uri(GEOCODING_URL + "?name={name}&count=1&format=json", location)
+                .uri(geocodingUrl + "?name={name}&count=1&format=json", location)
                 .retrieve()
                 .body(GeocodingResponse.class);
 
@@ -64,10 +68,10 @@ public class OpenMeteoClient {
         var longitude = result.longitude();
 
         log.debug("Resolved {} to lat={}, lon={}", location, latitude, longitude);
-        log.info("Fetching forecast for {} (lat={}, lon={})", location, latitude, longitude);
+        log.debug("Fetching forecast for {} (lat={}, lon={})", location, latitude, longitude);
 
         var forecastResponse = restClient.get()
-                .uri(FORECAST_URL
+                .uri(forecastUrl
                         + "?latitude={lat}&longitude={lon}"
                         + "&daily=temperature_2m_max,temperature_2m_min,weather_code,wind_speed_10m_max"
                         + "&hourly=relative_humidity_2m"

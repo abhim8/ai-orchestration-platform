@@ -15,12 +15,10 @@ import org.springframework.web.client.RestClient;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.function.Function;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,6 +42,7 @@ class OpenMeteoClientTest {
     void setUp() {
         when(restClientBuilder.build()).thenReturn(restClient);
         when(restClient.get()).thenReturn(requestSpec);
+        when(requestSpec.uri(any(Function.class))).thenReturn(requestSpec);
         when(requestSpec.retrieve()).thenReturn(responseSpec);
         client = new OpenMeteoClient(restClientBuilder);
         ReflectionTestUtils.setField(client, "geocodingUrl", "https://geocoding-api.open-meteo.com/v1/search");
@@ -51,13 +50,10 @@ class OpenMeteoClientTest {
     }
 
     private void stubGeocoding(final GeocodingResponse response) {
-        when(requestSpec.uri(contains("geocoding-api"), (Object) any())).thenReturn(requestSpec);
         when(responseSpec.body(GeocodingResponse.class)).thenReturn(response);
     }
 
     private void stubForecast(final ForecastResponse response) {
-        when(requestSpec.uri(contains("api.open-meteo.com"), any(Double.class), any(Double.class), any(LocalDate.class)))
-                .thenReturn(requestSpec);
         when(responseSpec.body(ForecastResponse.class)).thenReturn(response);
     }
 
@@ -91,7 +87,6 @@ class OpenMeteoClientTest {
     @Test
     @DisplayName("should throw LocationNotFoundException for null response")
     void shouldThrowForNullResponse() {
-        when(requestSpec.uri(contains("geocoding-api"), (Object) any())).thenReturn(requestSpec);
         when(responseSpec.body(GeocodingResponse.class)).thenReturn(null);
 
         assertThrows(LocationNotFoundException.class,
@@ -101,7 +96,6 @@ class OpenMeteoClientTest {
     @Test
     @DisplayName("should throw LocationNotFoundException when results are empty")
     void shouldThrowForEmptyResults() {
-        when(requestSpec.uri(contains("geocoding-api"), (Object) any())).thenReturn(requestSpec);
         when(responseSpec.body(GeocodingResponse.class))
                 .thenReturn(new GeocodingResponse(List.of()));
 

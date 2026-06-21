@@ -54,7 +54,11 @@ public class OpenMeteoClient {
         log.debug("Resolving coordinates for location: {}", location);
 
         var geoResponse = restClient.get()
-                .uri(geocodingUrl + "?name={name}&count=1&format=json", location)
+                .uri(b -> b.path(geocodingUrl)
+                        .queryParam("name", location)
+                        .queryParam("count", 1)
+                        .queryParam("format", "json")
+                        .build())
                 .retrieve()
                 .body(GeocodingResponse.class);
 
@@ -71,13 +75,15 @@ public class OpenMeteoClient {
         log.debug("Fetching forecast for {} (lat={}, lon={})", location, latitude, longitude);
 
         var forecastResponse = restClient.get()
-                .uri(forecastUrl
-                        + "?latitude={lat}&longitude={lon}"
-                        + "&daily=temperature_2m_max,temperature_2m_min,weather_code,wind_speed_10m_max"
-                        + "&hourly=relative_humidity_2m"
-                        + "&timezone=auto"
-                        + "&start_date={date}&end_date={date}",
-                        latitude, longitude, date)
+                .uri(b -> b.path(forecastUrl)
+                        .queryParam("latitude", latitude)
+                        .queryParam("longitude", longitude)
+                        .queryParam("daily", "temperature_2m_max,temperature_2m_min,weather_code,wind_speed_10m_max")
+                        .queryParam("hourly", "relative_humidity_2m")
+                        .queryParam("timezone", "auto")
+                        .queryParam("start_date", date.toString())
+                        .queryParam("end_date", date.toString())
+                        .build())
                 .retrieve()
                 .body(ForecastResponse.class);
 

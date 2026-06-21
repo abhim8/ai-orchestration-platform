@@ -1,12 +1,16 @@
 package com.aiorchestration.gateway.planner;
 
-import com.aiorchestration.gateway.exception.PlanGenerationException;
+import com.aiorchestration.gateway.exception.*;
 import com.aiorchestration.gateway.model.PlanGenerationResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.converter.BeanOutputConverter;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 
 /**
  * Sole service responsible for interacting with Gemini via Spring AI.
@@ -61,8 +65,26 @@ public class IntentPlannerService {
 
             log.debug("Plan generated successfully with confidence: {}", result.confidence());
             return result;
+        } catch (HttpClientErrorException e) {
+            var status = e.getStatusCode();
+            if (HttpStatus.TOO_MANY_REQUESTS.equals(status)) {
+                log.warn("AI planning quota exceeded: {}", e.getMessage());
+                throw new PlannerQuotaExceededException("AI planning quota exceeded", e);
+            } else if (HttpStatus.UNAUTHORIZED.equals(status) || HttpStatus.FORBIDDEN.equals(status)) {
+                log.warn("AI planning authentication failed: {}", e.getMessage());
+                throw new PlannerAuthenticationException("AI planning authentication failed", e);
+            } else {
+                log.warn("AI planning request rejected ({}): {}", status, e.getMessage());
+                throw new PlannerBadRequestException("AI planning request rejected", e);
+            }
+        } catch (HttpServerErrorException e) {
+            log.warn("AI planning service error ({}): {}", e.getStatusCode(), e.getMessage());
+            throw new PlannerUnavailableException("AI planning service unavailable", e);
+        } catch (ResourceAccessException e) {
+            log.warn("AI planning connectivity failure: {}", e.getMessage());
+            throw new PlannerUnavailableException("AI planning service unavailable", e);
         } catch (Exception e) {
-            log.warn("AI planning failed: {}", e.getMessage());
+            log.error("Unexpected AI planning failure: {}", e.getMessage(), e);
             throw new PlanGenerationException("Failed to generate execution plan", e);
         }
     }

@@ -7,18 +7,21 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,13 +39,16 @@ class OpenMeteoClientTest {
     @Mock
     private RestClient.ResponseSpec responseSpec;
 
+    @Captor
+    private ArgumentCaptor<URI> uriCaptor;
+
     private OpenMeteoClient client;
 
     @BeforeEach
     void setUp() {
         when(restClientBuilder.build()).thenReturn(restClient);
         when(restClient.get()).thenReturn(requestSpec);
-        when(requestSpec.uri(any(Function.class))).thenReturn(requestSpec);
+        when(requestSpec.uri(any(URI.class))).thenReturn(requestSpec);
         when(requestSpec.retrieve()).thenReturn(responseSpec);
         client = new OpenMeteoClient(restClientBuilder);
         ReflectionTestUtils.setField(client, "geocodingUrl", "https://geocoding-api.open-meteo.com/v1/search");
@@ -143,5 +149,39 @@ class OpenMeteoClientTest {
         assertEquals("London", response.location());
         assertEquals(new BigDecimal("15.0"), response.temperatureCelsius());
         assertEquals("Overcast", response.condition());
+    }
+
+    @Test
+    @DisplayName("should construct valid HTTPS URIs without double-slash bug")
+    void shouldConstructValidHttpsUris() {
+        stubGeocoding(new GeocodingResponse(List.of(
+                new GeocodingResponse.GeocodingResult(35.6785, 139.6823, "Tokyo"))));
+        stubForecast(new ForecastResponse(
+                new ForecastResponse.Daily(
+                        List.of("2026-07-15"),
+                        List.of(28.5),
+                        List.of(22.3),
+                        List.of(2),
+                        List.of(15.3)),
+                new ForecastResponse.Hourly(List.of(), List.of())));
+
+        client.getForecast("Tokyo", LocalDate.of(2026, 7, 15));
+
+        verify(requestSpec, org.mockito.Mockito.times(2)).uri(uriCaptor.capture());
+        var uris = uriCaptor.getAllValues();
+
+        assertEquals(2, uris.size());
+
+        assertTrue(uris.get(0).toString().startsWith("https://geocoding-api.open-meteo.com/v1/search"),
+                "Geocoding URI should start with https:// (double slash preserved), but was: " + uris.get(0));
+        assertTrue(uris.get(0).toString().contains("name=Tokyo"),
+                "Geocoding URI should contain location query param");
+
+        assertTrue(uris.get(1).toString().startsWith("https://api.open-meteo.com/v1/forecast"),
+                "Forecast URI should start with https:// (double slash preserved), but was: " + uris.get(1));
+        assertTrue(uris.get(1).toString().contains("latitude=35.6785"),
+                "Forecast URI should contain latitude query param");
+        assertTrue(uris.get(1).toString().contains("longitude=139.6823"),
+                "Forecast URI should contain longitude query param");
     }
 }

@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -53,12 +54,15 @@ public class OpenMeteoClient {
     public WeatherForecastResponse getForecast(final String location, final LocalDate date) {
         log.debug("Resolving coordinates for location: {}", location);
 
+        var geoUri = UriComponentsBuilder.fromUriString(geocodingUrl)
+                .queryParam("name", location)
+                .queryParam("count", 1)
+                .queryParam("format", "json")
+                .build()
+                .toUri();
+
         var geoResponse = restClient.get()
-                .uri(b -> b.path(geocodingUrl)
-                        .queryParam("name", location)
-                        .queryParam("count", 1)
-                        .queryParam("format", "json")
-                        .build())
+                .uri(geoUri)
                 .retrieve()
                 .body(GeocodingResponse.class);
 
@@ -74,16 +78,19 @@ public class OpenMeteoClient {
         log.debug("Resolved {} to lat={}, lon={}", location, latitude, longitude);
         log.debug("Fetching forecast for {} (lat={}, lon={})", location, latitude, longitude);
 
+        var forecastUri = UriComponentsBuilder.fromUriString(forecastUrl)
+                .queryParam("latitude", latitude)
+                .queryParam("longitude", longitude)
+                .queryParam("daily", "temperature_2m_max,temperature_2m_min,weather_code,wind_speed_10m_max")
+                .queryParam("hourly", "relative_humidity_2m")
+                .queryParam("timezone", "auto")
+                .queryParam("start_date", date.toString())
+                .queryParam("end_date", date.toString())
+                .build()
+                .toUri();
+
         var forecastResponse = restClient.get()
-                .uri(b -> b.path(forecastUrl)
-                        .queryParam("latitude", latitude)
-                        .queryParam("longitude", longitude)
-                        .queryParam("daily", "temperature_2m_max,temperature_2m_min,weather_code,wind_speed_10m_max")
-                        .queryParam("hourly", "relative_humidity_2m")
-                        .queryParam("timezone", "auto")
-                        .queryParam("start_date", date.toString())
-                        .queryParam("end_date", date.toString())
-                        .build())
+                .uri(forecastUri)
                 .retrieve()
                 .body(ForecastResponse.class);
 

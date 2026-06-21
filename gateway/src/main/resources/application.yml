@@ -9,7 +9,7 @@ spring:
       genai:
         api-key: ${GEMINI_API_KEY}
         chat:
-          model: gemini-2.0-flash
+          model: ${GEMINI_MODEL:gemini-2.5-flash-lite}
 flight-service:
   base-url: ${FLIGHT_SERVICE_BASE_URL:http://localhost:8081}
 

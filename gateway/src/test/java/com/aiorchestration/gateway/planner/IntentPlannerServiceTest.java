@@ -1,6 +1,6 @@
 package com.aiorchestration.gateway.planner;
 
-import com.aiorchestration.gateway.exception.PlanGenerationException;
+import com.aiorchestration.gateway.exception.*;
 import com.aiorchestration.gateway.model.ExecutionPlan;
 import com.aiorchestration.gateway.model.ExecutionStep;
 import com.aiorchestration.gateway.model.PlanGenerationResult;
@@ -14,6 +14,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.converter.BeanOutputConverter;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -105,8 +109,8 @@ class IntentPlannerServiceTest {
     }
 
     @Test
-    @DisplayName("should throw PlanGenerationException when AI call fails")
-    void shouldThrowOnAiFailure() {
+    @DisplayName("should throw PlanGenerationException for unexpected failures")
+    void shouldThrowPlanGenerationOnUnexpectedFailure() {
         when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
         when(chatClient.prompt()).thenReturn(requestSpec);
         when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
@@ -116,6 +120,96 @@ class IntentPlannerServiceTest {
         var exception = assertThrows(PlanGenerationException.class,
                 () -> service.plan(CONVERSATION_ID, TEST_MESSAGE));
         assertTrue(exception.getMessage().contains("Failed to generate execution plan"));
+        assertNotNull(exception.getCause());
+    }
+
+    @Test
+    @DisplayName("should throw PlannerBadRequestException for 4xx errors")
+    void shouldThrowPlannerBadRequestFor4xx() {
+        when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
+        when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
+        when(requestSpec.call()).thenThrow(new HttpClientErrorException(HttpStatus.BAD_REQUEST));
+
+        var exception = assertThrows(PlannerBadRequestException.class,
+                () -> service.plan(CONVERSATION_ID, TEST_MESSAGE));
+        assertTrue(exception.getMessage().contains("AI planning request rejected"));
+        assertNotNull(exception.getCause());
+    }
+
+    @Test
+    @DisplayName("should throw PlannerAuthenticationException for 401")
+    void shouldThrowPlannerAuthenticationFor401() {
+        when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
+        when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
+        when(requestSpec.call()).thenThrow(new HttpClientErrorException(HttpStatus.UNAUTHORIZED));
+
+        var exception = assertThrows(PlannerAuthenticationException.class,
+                () -> service.plan(CONVERSATION_ID, TEST_MESSAGE));
+        assertTrue(exception.getMessage().contains("AI planning authentication failed"));
+        assertNotNull(exception.getCause());
+    }
+
+    @Test
+    @DisplayName("should throw PlannerAuthenticationException for 403")
+    void shouldThrowPlannerAuthenticationFor403() {
+        when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
+        when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
+        when(requestSpec.call()).thenThrow(new HttpClientErrorException(HttpStatus.FORBIDDEN));
+
+        var exception = assertThrows(PlannerAuthenticationException.class,
+                () -> service.plan(CONVERSATION_ID, TEST_MESSAGE));
+        assertTrue(exception.getMessage().contains("AI planning authentication failed"));
+        assertNotNull(exception.getCause());
+    }
+
+    @Test
+    @DisplayName("should throw PlannerQuotaExceededException for 429")
+    void shouldThrowPlannerQuotaExceededFor429() {
+        when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
+        when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
+        when(requestSpec.call()).thenThrow(new HttpClientErrorException(HttpStatus.TOO_MANY_REQUESTS));
+
+        var exception = assertThrows(PlannerQuotaExceededException.class,
+                () -> service.plan(CONVERSATION_ID, TEST_MESSAGE));
+        assertTrue(exception.getMessage().contains("AI planning quota exceeded"));
+        assertNotNull(exception.getCause());
+    }
+
+    @Test
+    @DisplayName("should throw PlannerUnavailableException for 5xx")
+    void shouldThrowPlannerUnavailableFor5xx() {
+        when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
+        when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
+        when(requestSpec.call()).thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        var exception = assertThrows(PlannerUnavailableException.class,
+                () -> service.plan(CONVERSATION_ID, TEST_MESSAGE));
+        assertTrue(exception.getMessage().contains("AI planning service unavailable"));
+        assertNotNull(exception.getCause());
+    }
+
+    @Test
+    @DisplayName("should throw PlannerUnavailableException for connectivity failures")
+    void shouldThrowPlannerUnavailableForConnectivity() {
+        when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
+        when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
+        when(requestSpec.call()).thenThrow(new ResourceAccessException("Connection refused"));
+
+        var exception = assertThrows(PlannerUnavailableException.class,
+                () -> service.plan(CONVERSATION_ID, TEST_MESSAGE));
+        assertTrue(exception.getMessage().contains("AI planning service unavailable"));
         assertNotNull(exception.getCause());
     }
 

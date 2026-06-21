@@ -91,13 +91,44 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(PlannerBadRequestException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handlePlannerBadRequest(final PlannerBadRequestException ex,
+                                                  final HttpServletRequest request) {
+        log.warn("Planner bad request: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(PlannerQuotaExceededException.class)
+    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+    public ErrorResponse handlePlannerQuotaExceeded(final PlannerQuotaExceededException ex,
+                                                     final HttpServletRequest request) {
+        log.warn("Planner quota exceeded: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(PlannerAuthenticationException.class)
+    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    public ErrorResponse handlePlannerAuthentication(final PlannerAuthenticationException ex,
+                                                      final HttpServletRequest request) {
+        log.warn("Planner authentication failure: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.BAD_GATEWAY, ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(PlannerUnavailableException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ErrorResponse handlePlannerUnavailable(final PlannerUnavailableException ex,
+                                                   final HttpServletRequest request) {
+        log.warn("Planner unavailable: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(PlanValidationException.class)
-    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
-    @SuppressWarnings("deprecation")
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handlePlanValidation(final PlanValidationException ex,
                                                final HttpServletRequest request) {
         log.warn("Plan validation failed: {}", ex.getMessage());
-        return buildErrorResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), request);
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
     @ExceptionHandler(PlanGenerationException.class)

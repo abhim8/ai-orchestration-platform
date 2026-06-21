@@ -151,15 +151,63 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("should handle PlanValidationException with 422")
+    @DisplayName("should handle PlanValidationException with 400")
     void shouldHandlePlanValidation() {
         var ex = new PlanValidationException("Confidence too low");
 
         var response = handler.handlePlanValidation(ex, request);
 
-        assertEquals(422, response.getStatus());
-        assertEquals("Unprocessable Entity", response.getError());
+        assertEquals(400, response.getStatus());
+        assertEquals("Bad Request", response.getError());
         assertEquals("Confidence too low", response.getMessage());
+    }
+
+    @Test
+    @DisplayName("should handle PlannerBadRequestException with 400")
+    void shouldHandlePlannerBadRequest() {
+        var ex = new PlannerBadRequestException("Invalid request", new RuntimeException());
+
+        var response = handler.handlePlannerBadRequest(ex, request);
+
+        assertEquals(400, response.getStatus());
+        assertEquals("Bad Request", response.getError());
+        assertEquals("Invalid request", response.getMessage());
+    }
+
+    @Test
+    @DisplayName("should handle PlannerQuotaExceededException with 429")
+    void shouldHandlePlannerQuotaExceeded() {
+        var ex = new PlannerQuotaExceededException("Quota exceeded", new RuntimeException());
+
+        var response = handler.handlePlannerQuotaExceeded(ex, request);
+
+        assertEquals(429, response.getStatus());
+        assertEquals("Too Many Requests", response.getError());
+        assertEquals("Quota exceeded", response.getMessage());
+    }
+
+    @Test
+    @DisplayName("should handle PlannerAuthenticationException with 502")
+    void shouldHandlePlannerAuthentication() {
+        var ex = new PlannerAuthenticationException("Auth failed", new RuntimeException());
+
+        var response = handler.handlePlannerAuthentication(ex, request);
+
+        assertEquals(502, response.getStatus());
+        assertEquals("Bad Gateway", response.getError());
+        assertEquals("Auth failed", response.getMessage());
+    }
+
+    @Test
+    @DisplayName("should handle PlannerUnavailableException with 503")
+    void shouldHandlePlannerUnavailable() {
+        var ex = new PlannerUnavailableException("Service down", new RuntimeException());
+
+        var response = handler.handlePlannerUnavailable(ex, request);
+
+        assertEquals(503, response.getStatus());
+        assertEquals("Service Unavailable", response.getError());
+        assertEquals("Service down", response.getMessage());
     }
 
     @Test

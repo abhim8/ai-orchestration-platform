@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: weather-service
+weather:
+  forecast:
+    max-days-ahead: ${WEATHER_MAX_DAYS_AHEAD:16}
+
 open-meteo:
   geocoding-url: ${OPEN_METEO_GEOCODING_URL:https://geocoding-api.open-meteo.com/v1/search}
   forecast-url: ${OPEN_METEO_FORECAST_URL:https://api.open-meteo.com/v1/forecast}

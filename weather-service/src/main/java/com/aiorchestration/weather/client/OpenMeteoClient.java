@@ -1,6 +1,8 @@
 package com.aiorchestration.weather.client;
 
+import com.aiorchestration.weather.exception.ForecastRateLimitException;
 import com.aiorchestration.weather.exception.ForecastRetrievalException;
+import com.aiorchestration.weather.exception.InvalidForecastRequestException;
 import com.aiorchestration.weather.exception.LocationNotFoundException;
 import com.aiorchestration.weather.model.WeatherForecastResponse;
 import com.aiorchestration.weather.model.openmeteo.ForecastResponse;
@@ -8,6 +10,9 @@ import com.aiorchestration.weather.model.openmeteo.GeocodingResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -49,7 +54,10 @@ public class OpenMeteoClient {
      * @param location city or region name
      * @param date     forecast date
      * @return the weather forecast
-     * @throws LocationNotFoundException if the location cannot be resolved
+     * @throws InvalidForecastRequestException if the upstream reports a bad request
+     * @throws LocationNotFoundException      if the location cannot be resolved
+     * @throws ForecastRateLimitException      if rate limited by the upstream
+     * @throws ForecastRetrievalException      for server errors, timeouts, or connection failures
      */
     public WeatherForecastResponse getForecast(final String location, final LocalDate date) {
         log.debug("Resolving coordinates for location: {}", location);
@@ -61,10 +69,19 @@ public class OpenMeteoClient {
                 .build()
                 .toUri();
 
-        var geoResponse = restClient.get()
-                .uri(geoUri)
-                .retrieve()
-                .body(GeocodingResponse.class);
+        GeocodingResponse geoResponse;
+        try {
+            geoResponse = restClient.get()
+                    .uri(geoUri)
+                    .retrieve()
+                    .body(GeocodingResponse.class);
+        } catch (HttpClientErrorException e) {
+            throw translateHttpClientError(e, "Geocoding request failed for location: " + location, location);
+        } catch (HttpServerErrorException e) {
+            throw new ForecastRetrievalException("Geocoding server error for location: " + location, e);
+        } catch (ResourceAccessException e) {
+            throw new ForecastRetrievalException("Geocoding service unreachable for location: " + location, e);
+        }
 
         if (geoResponse == null || geoResponse.results() == null || geoResponse.results().isEmpty()) {
             log.warn("Location not found: {}", location);
@@ -89,10 +106,19 @@ public class OpenMeteoClient {
                 .build()
                 .toUri();
 
-        var forecastResponse = restClient.get()
-                .uri(forecastUri)
-                .retrieve()
-                .body(ForecastResponse.class);
+        ForecastResponse forecastResponse;
+        try {
+            forecastResponse = restClient.get()
+                    .uri(forecastUri)
+                    .retrieve()
+                    .body(ForecastResponse.class);
+        } catch (HttpClientErrorException e) {
+            throw translateHttpClientError(e, "Forecast request failed for location: " + location, location);
+        } catch (HttpServerErrorException e) {
+            throw new ForecastRetrievalException("Forecast server error for location: " + location, e);
+        } catch (ResourceAccessException e) {
+            throw new ForecastRetrievalException("Forecast service unreachable for location: " + location, e);
+        }
 
         if (forecastResponse == null || forecastResponse.daily() == null) {
             log.warn("Failed to fetch forecast data for: {}", location);
@@ -123,6 +149,30 @@ public class OpenMeteoClient {
                 humidity,
                 BigDecimal.valueOf(windSpeed).setScale(1, RoundingMode.HALF_UP)
         );
+    }
+
+    /**
+     * Translate an {@link HttpClientErrorException} into the appropriate domain exception
+     * based on its HTTP status code.
+     */
+    private RuntimeException translateHttpClientError(final HttpClientErrorException e,
+                                                       final String context,
+                                                       final String location) {
+        var statusCode = e.getStatusCode();
+        if (statusCode.value() == 400) {
+            log.warn("Bad request for location {}: {}", location, e.getMessage());
+            return new InvalidForecastRequestException("Bad forecast request: " + location + " (" + statusCode + ")");
+        }
+        if (statusCode.value() == 404) {
+            log.warn("Location not found: {}", location);
+            return new LocationNotFoundException("Location not found: " + location);
+        }
+        if (statusCode.value() == 429) {
+            log.warn("Rate limit exceeded for location {}: {}", location, e.getMessage());
+            return new ForecastRateLimitException("Weather forecast rate limit exceeded");
+        }
+        log.warn("Client error for location {}: {} {}", location, statusCode, e.getMessage());
+        return new ForecastRetrievalException(context + " (" + statusCode + ")", e);
     }
 
     /**

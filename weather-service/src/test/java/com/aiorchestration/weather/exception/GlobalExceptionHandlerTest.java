@@ -108,14 +108,36 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("should handle ForecastRetrievalException with 502")
+    @DisplayName("should handle InvalidForecastRequestException with 400")
+    void shouldHandleInvalidForecastRequest() {
+        var ex = new InvalidForecastRequestException("Past date not supported");
+
+        var response = handler.handleInvalidForecastRequest(ex, request);
+
+        assertEquals(400, response.getStatus());
+        assertEquals("Past date not supported", response.getMessage());
+    }
+
+    @Test
+    @DisplayName("should handle ForecastRateLimitException with 429")
+    void shouldHandleForecastRateLimit() {
+        var ex = new ForecastRateLimitException("Rate limit exceeded");
+
+        var response = handler.handleForecastRateLimit(ex, request);
+
+        assertEquals(429, response.getStatus());
+        assertEquals("Rate limit exceeded", response.getMessage());
+    }
+
+    @Test
+    @DisplayName("should handle ForecastRetrievalException with 503")
     void shouldHandleForecastRetrieval() {
         var ex = new ForecastRetrievalException("Open-Meteo API timeout");
 
         var response = handler.handleForecastRetrieval(ex, request);
 
-        assertEquals(502, response.getStatus());
-        assertEquals("Weather service unavailable", response.getMessage());
+        assertEquals(503, response.getStatus());
+        assertEquals("Weather service is temporarily unavailable", response.getMessage());
     }
 
     @Test

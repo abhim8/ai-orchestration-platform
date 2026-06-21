@@ -1,5 +1,8 @@
 package com.aiorchestration.weather.client;
 
+import com.aiorchestration.weather.exception.ForecastRateLimitException;
+import com.aiorchestration.weather.exception.ForecastRetrievalException;
+import com.aiorchestration.weather.exception.InvalidForecastRequestException;
 import com.aiorchestration.weather.exception.LocationNotFoundException;
 import com.aiorchestration.weather.model.openmeteo.ForecastResponse;
 import com.aiorchestration.weather.model.openmeteo.GeocodingResponse;
@@ -11,7 +14,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
@@ -183,5 +190,109 @@ class OpenMeteoClientTest {
                 "Forecast URI should contain latitude query param");
         assertTrue(uris.get(1).toString().contains("longitude=139.6823"),
                 "Forecast URI should contain longitude query param");
+    }
+
+    // --- Downstream exception translation ---
+
+    @Test
+    @DisplayName("geocoding 400 should translate to InvalidForecastRequestException")
+    void geocoding400ShouldTranslateToInvalidForecastRequest() {
+        when(responseSpec.body(GeocodingResponse.class))
+                .thenThrow(new HttpClientErrorException(HttpStatus.BAD_REQUEST));
+
+        assertThrows(InvalidForecastRequestException.class,
+                () -> client.getForecast("BadCity", LocalDate.of(2026, 7, 15)));
+    }
+
+    @Test
+    @DisplayName("geocoding 404 should translate to LocationNotFoundException")
+    void geocoding404ShouldTranslateToLocationNotFound() {
+        when(responseSpec.body(GeocodingResponse.class))
+                .thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND));
+
+        assertThrows(LocationNotFoundException.class,
+                () -> client.getForecast("Unknown", LocalDate.of(2026, 7, 15)));
+    }
+
+    @Test
+    @DisplayName("geocoding 429 should translate to ForecastRateLimitException")
+    void geocoding429ShouldTranslateToRateLimit() {
+        when(responseSpec.body(GeocodingResponse.class))
+                .thenThrow(new HttpClientErrorException(HttpStatus.TOO_MANY_REQUESTS));
+
+        assertThrows(ForecastRateLimitException.class,
+                () -> client.getForecast("Tokyo", LocalDate.of(2026, 7, 15)));
+    }
+
+    @Test
+    @DisplayName("geocoding 5xx should translate to ForecastRetrievalException")
+    void geocoding5xxShouldTranslateToForecastRetrieval() {
+        when(responseSpec.body(GeocodingResponse.class))
+                .thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        assertThrows(ForecastRetrievalException.class,
+                () -> client.getForecast("Tokyo", LocalDate.of(2026, 7, 15)));
+    }
+
+    @Test
+    @DisplayName("forecast 400 should translate to InvalidForecastRequestException")
+    void forecast400ShouldTranslateToInvalidForecastRequest() {
+        stubGeocoding(new GeocodingResponse(List.of(
+                new GeocodingResponse.GeocodingResult(35.6785, 139.6823, "Tokyo"))));
+        when(responseSpec.body(ForecastResponse.class))
+                .thenThrow(new HttpClientErrorException(HttpStatus.BAD_REQUEST));
+
+        assertThrows(InvalidForecastRequestException.class,
+                () -> client.getForecast("Tokyo", LocalDate.of(2026, 7, 15)));
+    }
+
+    @Test
+    @DisplayName("forecast 404 should translate to LocationNotFoundException")
+    void forecast404ShouldTranslateToLocationNotFound() {
+        stubGeocoding(new GeocodingResponse(List.of(
+                new GeocodingResponse.GeocodingResult(35.6785, 139.6823, "Tokyo"))));
+        when(responseSpec.body(ForecastResponse.class))
+                .thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND));
+
+        assertThrows(LocationNotFoundException.class,
+                () -> client.getForecast("Tokyo", LocalDate.of(2026, 7, 15)));
+    }
+
+    @Test
+    @DisplayName("forecast 429 should translate to ForecastRateLimitException")
+    void forecast429ShouldTranslateToRateLimit() {
+        stubGeocoding(new GeocodingResponse(List.of(
+                new GeocodingResponse.GeocodingResult(35.6785, 139.6823, "Tokyo"))));
+        when(responseSpec.body(ForecastResponse.class))
+                .thenThrow(new HttpClientErrorException(HttpStatus.TOO_MANY_REQUESTS));
+
+        assertThrows(ForecastRateLimitException.class,
+                () -> client.getForecast("Tokyo", LocalDate.of(2026, 7, 15)));
+    }
+
+    @Test
+    @DisplayName("forecast 5xx should translate to ForecastRetrievalException")
+    void forecast5xxShouldTranslateToForecastRetrieval() {
+        stubGeocoding(new GeocodingResponse(List.of(
+                new GeocodingResponse.GeocodingResult(35.6785, 139.6823, "Tokyo"))));
+        when(responseSpec.body(ForecastResponse.class))
+                .thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        var ex = assertThrows(ForecastRetrievalException.class,
+                () -> client.getForecast("Tokyo", LocalDate.of(2026, 7, 15)));
+        assertNotNull(ex.getCause());
+    }
+
+    @Test
+    @DisplayName("timeout should translate to ForecastRetrievalException")
+    void timeoutShouldTranslateToForecastRetrieval() {
+        stubGeocoding(new GeocodingResponse(List.of(
+                new GeocodingResponse.GeocodingResult(35.6785, 139.6823, "Tokyo"))));
+        when(responseSpec.body(ForecastResponse.class))
+                .thenThrow(new ResourceAccessException("Read timed out"));
+
+        var ex = assertThrows(ForecastRetrievalException.class,
+                () -> client.getForecast("Tokyo", LocalDate.of(2026, 7, 15)));
+        assertNotNull(ex.getCause());
     }
 }

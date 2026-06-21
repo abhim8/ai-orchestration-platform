@@ -83,6 +83,14 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, "Parameter conversion failed", request);
     }
 
+    @ExceptionHandler(InvalidForecastRequestException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleInvalidForecastRequest(final InvalidForecastRequestException ex,
+                                                       final HttpServletRequest request) {
+        log.warn("Invalid forecast request: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleIllegalArgument(final IllegalArgumentException ex,
@@ -99,12 +107,20 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
+    @ExceptionHandler(ForecastRateLimitException.class)
+    @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+    public ErrorResponse handleForecastRateLimit(final ForecastRateLimitException ex,
+                                                  final HttpServletRequest request) {
+        log.warn("Forecast rate limit exceeded: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), request);
+    }
+
     @ExceptionHandler(ForecastRetrievalException.class)
-    @ResponseStatus(HttpStatus.BAD_GATEWAY)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     public ErrorResponse handleForecastRetrieval(final ForecastRetrievalException ex,
                                                   final HttpServletRequest request) {
-        log.error("Forecast retrieval failed: {}", ex.getMessage(), ex);
-        return buildErrorResponse(HttpStatus.BAD_GATEWAY, "Weather service unavailable", request);
+        log.warn("Forecast retrieval failed: {}", ex.getMessage());
+        return buildErrorResponse(HttpStatus.SERVICE_UNAVAILABLE, "Weather service is temporarily unavailable", request);
     }
 
     @ExceptionHandler(Exception.class)

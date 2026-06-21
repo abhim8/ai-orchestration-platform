@@ -1,6 +1,7 @@
 package com.aiorchestration.gateway.config;
 
 import com.aiorchestration.gateway.model.PlanGenerationResult;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -11,17 +12,19 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Spring AI infrastructure configuration.
- *
- * Creates singleton beans for ChatClient, BeanOutputConverter, ChatMemory,
- * and MessageChatMemoryAdvisor. All beans are provider-agnostic and rely
- * on auto-configured Spring AI components. Gemini-specific configuration
- * is externalized to application.yml.
- */
 @Slf4j
 @Configuration
 public class SpringAiConfig {
+
+    @Value("${spring.ai.google.genai.chat.model}")
+    private String modelName;
+
+    @PostConstruct
+    void logStartupDiagnostics() {
+        log.info("Gemini planner configured: model={} | Google SDK retry active: maxAttempts=5, "
+                + "retryable=408,429,500,502,503,504, backoff=1s*2^n max=60s jitter=full",
+                modelName);
+    }
 
     @Bean
     public ChatClient chatClient(ChatClient.Builder builder, MessageChatMemoryAdvisor advisor) {

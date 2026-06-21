@@ -31,10 +31,10 @@ import java.util.List;
 @Component
 public class OpenMeteoClient {
 
-    @Value("${open-meteo.geocoding-url:https://geocoding-api.open-meteo.com/v1/search}")
+    @Value("${open-meteo.geocoding-url}")
     private String geocodingUrl;
 
-    @Value("${open-meteo.forecast-url:https://api.open-meteo.com/v1/forecast}")
+    @Value("${open-meteo.forecast-url}")
     private String forecastUrl;
 
     private final RestClient restClient;

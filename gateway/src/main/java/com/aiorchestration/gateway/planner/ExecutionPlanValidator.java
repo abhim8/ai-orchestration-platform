@@ -34,7 +34,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class ExecutionPlanValidator {
 
-    @Value("${planning.minimum-confidence:0.5}")
+    @Value("${planning.minimum-confidence}")
     private double minimumConfidence;
 
     private final ToolRegistry toolRegistry;

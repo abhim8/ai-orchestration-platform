@@ -4,6 +4,9 @@ import com.aiorchestration.gateway.exception.*;
 import com.aiorchestration.gateway.model.ExecutionPlan;
 import com.aiorchestration.gateway.model.ExecutionStep;
 import com.aiorchestration.gateway.model.PlanGenerationResult;
+import com.google.genai.errors.ClientException;
+import com.google.genai.errors.GenAiIOException;
+import com.google.genai.errors.ServerException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -124,7 +127,115 @@ class IntentPlannerServiceTest {
     }
 
     @Test
-    @DisplayName("should throw PlannerBadRequestException for 4xx errors")
+    @DisplayName("should throw PlannerBadRequestException for 4xx ClientException")
+    void shouldThrowPlannerBadRequestForClientException() {
+        when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
+        when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
+        when(requestSpec.call()).thenThrow(
+                new RuntimeException("Failed to generate content", new ClientException(400, "BAD_REQUEST", "Bad request")));
+
+        var exception = assertThrows(PlannerBadRequestException.class,
+                () -> service.plan(CONVERSATION_ID, TEST_MESSAGE));
+        assertTrue(exception.getMessage().contains("AI planning request rejected"));
+        assertTrue(exception.getCause() instanceof RuntimeException);
+        assertNotNull(exception.getCause().getCause());
+        assertInstanceOf(ClientException.class, exception.getCause().getCause());
+    }
+
+    @Test
+    @DisplayName("should throw PlannerAuthenticationException for 401 ClientException")
+    void shouldThrowPlannerAuthenticationFor401ClientException() {
+        when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
+        when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
+        when(requestSpec.call()).thenThrow(
+                new RuntimeException("Failed to generate content", new ClientException(401, "UNAUTHENTICATED", "Unauthenticated")));
+
+        var exception = assertThrows(PlannerAuthenticationException.class,
+                () -> service.plan(CONVERSATION_ID, TEST_MESSAGE));
+        assertTrue(exception.getMessage().contains("AI planning authentication failed"));
+    }
+
+    @Test
+    @DisplayName("should throw PlannerAuthenticationException for 403 ClientException")
+    void shouldThrowPlannerAuthenticationFor403ClientException() {
+        when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
+        when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
+        when(requestSpec.call()).thenThrow(
+                new RuntimeException("Failed to generate content", new ClientException(403, "FORBIDDEN", "Forbidden")));
+
+        var exception = assertThrows(PlannerAuthenticationException.class,
+                () -> service.plan(CONVERSATION_ID, TEST_MESSAGE));
+        assertTrue(exception.getMessage().contains("AI planning authentication failed"));
+    }
+
+    @Test
+    @DisplayName("should throw PlannerQuotaExceededException for 429 ClientException")
+    void shouldThrowPlannerQuotaExceededFor429ClientException() {
+        when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
+        when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
+        when(requestSpec.call()).thenThrow(
+                new RuntimeException("Failed to generate content", new ClientException(429, "RATE_LIMITED", "Rate limited")));
+
+        var exception = assertThrows(PlannerQuotaExceededException.class,
+                () -> service.plan(CONVERSATION_ID, TEST_MESSAGE));
+        assertTrue(exception.getMessage().contains("AI planning quota exceeded"));
+    }
+
+    @Test
+    @DisplayName("should throw PlannerUnavailableException for 5xx ServerException")
+    void shouldThrowPlannerUnavailableForServerException() {
+        when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
+        when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
+        when(requestSpec.call()).thenThrow(
+                new RuntimeException("Failed to generate content", new ServerException(503, "UNAVAILABLE", "Service unavailable")));
+
+        var exception = assertThrows(PlannerUnavailableException.class,
+                () -> service.plan(CONVERSATION_ID, TEST_MESSAGE));
+        assertTrue(exception.getMessage().contains("AI planning service unavailable"));
+    }
+
+    @Test
+    @DisplayName("should throw PlannerUnavailableException for GenAiIOException")
+    void shouldThrowPlannerUnavailableForGenAiIOException() {
+        when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
+        when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
+        when(requestSpec.call()).thenThrow(
+                new RuntimeException("Failed to generate content", new GenAiIOException("Connection reset")));
+
+        var exception = assertThrows(PlannerUnavailableException.class,
+                () -> service.plan(CONVERSATION_ID, TEST_MESSAGE));
+        assertTrue(exception.getMessage().contains("AI planning service unavailable"));
+    }
+
+    @Test
+    @DisplayName("should throw PlanGenerationException for non-Google RuntimeException without API exception cause")
+    void shouldThrowPlanGenerationForUnknownGoogleWrapper() {
+        when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
+        when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
+        when(requestSpec.call()).thenThrow(
+                new RuntimeException("Failed to generate content", new RuntimeException("Unknown cause")));
+
+        var exception = assertThrows(PlanGenerationException.class,
+                () -> service.plan(CONVERSATION_ID, TEST_MESSAGE));
+        assertTrue(exception.getMessage().contains("Failed to generate execution plan"));
+    }
+
+    @Test
+    @DisplayName("should throw PlannerBadRequestException for 4xx Spring HTTP errors")
     void shouldThrowPlannerBadRequestFor4xx() {
         when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
         when(chatClient.prompt()).thenReturn(requestSpec);
@@ -139,7 +250,7 @@ class IntentPlannerServiceTest {
     }
 
     @Test
-    @DisplayName("should throw PlannerAuthenticationException for 401")
+    @DisplayName("should throw PlannerAuthenticationException for 401 Spring HTTP errors")
     void shouldThrowPlannerAuthenticationFor401() {
         when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
         when(chatClient.prompt()).thenReturn(requestSpec);
@@ -154,7 +265,7 @@ class IntentPlannerServiceTest {
     }
 
     @Test
-    @DisplayName("should throw PlannerAuthenticationException for 403")
+    @DisplayName("should throw PlannerAuthenticationException for 403 Spring HTTP errors")
     void shouldThrowPlannerAuthenticationFor403() {
         when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
         when(chatClient.prompt()).thenReturn(requestSpec);
@@ -169,7 +280,7 @@ class IntentPlannerServiceTest {
     }
 
     @Test
-    @DisplayName("should throw PlannerQuotaExceededException for 429")
+    @DisplayName("should throw PlannerQuotaExceededException for 429 Spring HTTP errors")
     void shouldThrowPlannerQuotaExceededFor429() {
         when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
         when(chatClient.prompt()).thenReturn(requestSpec);
@@ -184,7 +295,7 @@ class IntentPlannerServiceTest {
     }
 
     @Test
-    @DisplayName("should throw PlannerUnavailableException for 5xx")
+    @DisplayName("should throw PlannerUnavailableException for 5xx Spring HTTP errors")
     void shouldThrowPlannerUnavailableFor5xx() {
         when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
         when(chatClient.prompt()).thenReturn(requestSpec);

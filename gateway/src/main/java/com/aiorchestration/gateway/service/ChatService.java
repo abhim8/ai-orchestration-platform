@@ -20,7 +20,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ChatService {
 
-    @Value("${planning.clarification-threshold:0.5}")
+    @Value("${planning.clarification-threshold}")
     private double clarificationThreshold;
 
     private final IntentPlannerService plannerService;

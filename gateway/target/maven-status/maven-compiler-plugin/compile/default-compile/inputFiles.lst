@@ -4,6 +4,7 @@
 /Users/abhilash/IdeaProjects/ai-orchestration-platform/gateway/src/main/java/com/aiorchestration/gateway/config/SpringAiConfig.java
 /Users/abhilash/IdeaProjects/ai-orchestration-platform/gateway/src/main/java/com/aiorchestration/gateway/controller/ChatController.java
 /Users/abhilash/IdeaProjects/ai-orchestration-platform/gateway/src/main/java/com/aiorchestration/gateway/exception/GlobalExceptionHandler.java
+/Users/abhilash/IdeaProjects/ai-orchestration-platform/gateway/src/main/java/com/aiorchestration/gateway/exception/PlanGenerationException.java
 /Users/abhilash/IdeaProjects/ai-orchestration-platform/gateway/src/main/java/com/aiorchestration/gateway/exception/PlanValidationException.java
 /Users/abhilash/IdeaProjects/ai-orchestration-platform/gateway/src/main/java/com/aiorchestration/gateway/model/ChatRequest.java
 /Users/abhilash/IdeaProjects/ai-orchestration-platform/gateway/src/main/java/com/aiorchestration/gateway/model/ChatResponse.java

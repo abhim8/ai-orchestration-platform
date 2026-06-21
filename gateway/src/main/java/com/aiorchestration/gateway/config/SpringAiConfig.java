@@ -23,9 +23,9 @@ import org.springframework.context.annotation.Configuration;
 public class SpringAiConfig {
 
     @Bean
-    public ChatClient chatClient(ChatClient.Builder builder) {
-        log.info("Creating ChatClient bean");
-        return builder.build();
+    public ChatClient chatClient(ChatClient.Builder builder, MessageChatMemoryAdvisor advisor) {
+        log.info("Creating ChatClient bean with default advisors");
+        return builder.defaultAdvisors(advisor).build();
     }
 
     @Bean

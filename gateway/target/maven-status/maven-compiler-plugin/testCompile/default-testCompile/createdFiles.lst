@@ -1,2 +1,3 @@
 com/aiorchestration/gateway/planner/IntentPlannerServiceTest.class
 com/aiorchestration/gateway/planner/tool/ResolveRelativeDateToolTest.class
+com/aiorchestration/gateway/planner/ExecutionPlanValidatorTest.class

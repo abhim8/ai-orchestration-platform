@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.07" tests="15" errors="0" skipped="0" failures="0" flakes="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.088" tests="26" errors="0" skipped="0" failures="0" flakes="0">
   <properties>
     <property name="java.specification.version" value="26"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -60,19 +60,81 @@
     <property name="socksNonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
     <property name="java.class.version" value="70.0"/>
   </properties>
-  <testcase name="shouldResolveToday" classname="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.002"/>
-  <testcase name="shouldResolveNextWeek" classname="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.001"/>
-  <testcase name="shouldThrowOnInvalidExpression" classname="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.002"/>
-  <testcase name="shouldResolveTomorrow" classname="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.0"/>
-  <testcase name="shouldResolveNextDayOfWeek(String, String)[1]" classname="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.004"/>
-  <testcase name="shouldResolveNextDayOfWeek(String, String)[2]" classname="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.001"/>
-  <testcase name="shouldResolveNextDayOfWeek(String, String)[3]" classname="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.001"/>
-  <testcase name="shouldResolveNextDayOfWeek(String, String)[4]" classname="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.001"/>
-  <testcase name="shouldResolveNextDayOfWeek(String, String)[5]" classname="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.002"/>
-  <testcase name="shouldResolveNextDayOfWeek(String, String)[6]" classname="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.001"/>
-  <testcase name="shouldResolveNextDayOfWeek(String, String)[7]" classname="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.0"/>
-  <testcase name="shouldResolveYesterday" classname="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.0"/>
-  <testcase name="shouldThrowOnEmptyInput" classname="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.001"/>
-  <testcase name="shouldTrimWhitespace" classname="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.0"/>
-  <testcase name="shouldBeCaseInsensitive" classname="com.aiorchestration.gateway.planner.tool.ResolveRelativeDateToolTest" time="0.001"/>
+  <testcase name="shouldAcceptNullDependsOn" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.039"/>
+  <testcase name="shouldRejectNullSteps" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.002">
+    <system-out><![CDATA[12:18:10.837 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: step list is empty
+]]></system-out>
+  </testcase>
+  <testcase name="shouldRejectNullExecutionPlan" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.001">
+    <system-out><![CDATA[12:18:10.839 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: executionPlan is null
+]]></system-out>
+  </testcase>
+  <testcase name="shouldWorkWithCustomToolRegistry" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.0"/>
+  <testcase name="shouldRejectSimpleCycle" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.001">
+    <system-out><![CDATA[12:18:10.841 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: cycle detected in execution plan
+]]></system-out>
+  </testcase>
+  <testcase name="shouldRejectInvalidDependsOnReference" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.002">
+    <system-out><![CDATA[12:18:10.842 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: step '1' depends on unknown step 'nonexistent'
+]]></system-out>
+  </testcase>
+  <testcase name="shouldRejectMissingArgInCustomRegistry" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.001">
+    <system-out><![CDATA[12:18:10.844 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: missing required argument 'requiredArg' for tool 'custom.tool'
+]]></system-out>
+  </testcase>
+  <testcase name="shouldRejectDiamondCycle" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.0">
+    <system-out><![CDATA[12:18:10.845 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: cycle detected in execution plan
+]]></system-out>
+  </testcase>
+  <testcase name="shouldAcceptValidDagWithParallelRoots" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.0"/>
+  <testcase name="shouldAcceptValidDagWithBranching" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.0"/>
+  <testcase name="shouldReportUnknownToolBeforeMissingArgs" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.001">
+    <system-out><![CDATA[12:18:10.848 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: unknown tool 'unknown.tool'
+]]></system-out>
+  </testcase>
+  <testcase name="shouldAcceptConfidenceAtThreshold" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.0"/>
+  <testcase name="shouldAcceptExtraArguments" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.0"/>
+  <testcase name="shouldRejectNullResult" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.002">
+    <system-out><![CDATA[12:18:10.853 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: PlanGenerationResult is null
+]]></system-out>
+  </testcase>
+  <testcase name="shouldRejectLowConfidence" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.004">
+    <system-out><![CDATA[12:18:10.856 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: planner confidence 0.34 is below minimum threshold 0.5
+]]></system-out>
+  </testcase>
+  <testcase name="shouldAcceptSingleStepPlan" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.002"/>
+  <testcase name="shouldAcceptLinearChain" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.002"/>
+  <testcase name="shouldRejectNullArguments" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.001">
+    <system-out><![CDATA[12:18:10.865 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: missing required argument 'origin' for tool 'flight.search'
+]]></system-out>
+  </testcase>
+  <testcase name="shouldRejectMissingRequiredArgument" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.001">
+    <system-out><![CDATA[12:18:10.866 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: missing required argument 'destination' for tool 'flight.search'
+]]></system-out>
+  </testcase>
+  <testcase name="shouldRejectSelfLoop" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.001">
+    <system-out><![CDATA[12:18:10.867 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: cycle detected in execution plan
+]]></system-out>
+  </testcase>
+  <testcase name="shouldRejectMultiNodeCycle" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.0">
+    <system-out><![CDATA[12:18:10.867 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: cycle detected in execution plan
+]]></system-out>
+  </testcase>
+  <testcase name="shouldRejectMissingAllRequiredArguments" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.0">
+    <system-out><![CDATA[12:18:10.868 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: missing required argument 'origin' for tool 'flight.search'
+]]></system-out>
+  </testcase>
+  <testcase name="shouldAcceptValidPlan" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.001"/>
+  <testcase name="shouldRejectEmptySteps" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.0">
+    <system-out><![CDATA[12:18:10.869 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: step list is empty
+]]></system-out>
+  </testcase>
+  <testcase name="shouldRejectDuplicateStepIds" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.0">
+    <system-out><![CDATA[12:18:10.870 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: duplicate stepId '1'
+]]></system-out>
+  </testcase>
+  <testcase name="shouldRejectUnknownTool" classname="com.aiorchestration.gateway.planner.ExecutionPlanValidatorTest" time="0.003">
+    <system-out><![CDATA[12:18:10.874 [main] WARN com.aiorchestration.gateway.planner.ExecutionPlanValidator -- Validation failed: unknown tool 'hotel.search'
+]]></system-out>
+  </testcase>
 </testsuite>

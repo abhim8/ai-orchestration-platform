@@ -31,7 +31,7 @@ public class WeatherClient {
      * @throws DownstreamServiceException if the downstream call fails
      */
     public WeatherForecastResponse getForecast(final Map<String, Object> arguments) {
-        log.debug("Getting forecast: location={}, date={}",
+        log.debug("Calling weather-service: GET /api/v1/weather/forecast?location={}&date={}",
                 arguments.get("location"), arguments.get("date"));
 
         try {
@@ -47,7 +47,8 @@ public class WeatherClient {
             log.debug("Weather forecast successful");
             return response;
         } catch (Exception e) {
-            log.warn("Weather forecast failed: {}", e.getMessage());
+            log.warn("Weather forecast failed: {} (cause: {})", e.getMessage(),
+                    e.getCause() != null ? e.getCause().getMessage() : "none");
             throw new DownstreamServiceException("Weather forecast failed: " + e.getMessage(), e);
         }
     }

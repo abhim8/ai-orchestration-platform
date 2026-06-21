@@ -35,7 +35,7 @@ public class SpringAiConfig {
         return new BeanOutputConverter<>(PlanGenerationResult.class);
     }
 
-    @Value("${chat.memory.max-messages:30}")
+    @Value("${chat.memory.max-messages}")
     private int maxMessages;
 
     @Bean

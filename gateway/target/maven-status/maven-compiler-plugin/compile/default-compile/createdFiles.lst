@@ -11,6 +11,7 @@ com/aiorchestration/gateway/client/FlightClient.class
 com/aiorchestration/gateway/controller/ChatController.class
 com/aiorchestration/gateway/model/ExecutionPlan.class
 com/aiorchestration/gateway/planner/IntentPlannerService.class
+com/aiorchestration/gateway/planner/tool/ResolveRelativeDateTool.class
 com/aiorchestration/gateway/model/StepStatus.class
 com/aiorchestration/gateway/model/ExecutionStep.class
 com/aiorchestration/gateway/model/ChatResponse.class

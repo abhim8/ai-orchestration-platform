@@ -16,14 +16,23 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SpringAiConfig {
 
+    @Value("${spring.ai.google.genai.api-key}")
+    private String apiKey;
+
     @Value("${spring.ai.google.genai.chat.model}")
     private String modelName;
 
     @PostConstruct
     void logStartupDiagnostics() {
-        log.info("Gemini planner configured: model={} | Google SDK retry active: maxAttempts=5, "
-                + "retryable=408,429,500,502,503,504, backoff=1s*2^n max=60s jitter=full",
-                modelName);
+
+        if (apiKey != null && !apiKey.isBlank())
+            log.info("GEMINI_API_KEY is configured. AI planning is enabled. Model={}", modelName);
+        else
+            log.warn("GEMINI_API_KEY is not configured. Chat planning requests will fail until a valid API key is provided.");
+
+        log.info("Using Google GenAI SDK built-in retry policy:" +
+                "Google SDK retry active: maxAttempts=5, " +
+                "retryable=408,429,500,502,503,504, backoff=1s*2^n max=60s jitter=full");
     }
 
     @Bean

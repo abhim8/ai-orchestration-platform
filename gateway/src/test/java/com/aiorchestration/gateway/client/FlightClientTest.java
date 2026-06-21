@@ -6,16 +6,22 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriBuilder;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -60,6 +66,25 @@ class FlightClientTest {
         assertNotNull(result);
         assertEquals(1, result.flights().size());
         assertEquals("AA123", result.flights().getFirst().flightNumber());
+    }
+
+    @Test
+    @DisplayName("should call the correct downstream endpoint path")
+    @SuppressWarnings("unchecked")
+    void shouldCallCorrectEndpoint() {
+        when(restClient.get()).thenReturn(requestSpec);
+        when(requestSpec.uri(any(Function.class))).thenReturn(requestSpec);
+        when(requestSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(FlightSearchResponse.class)).thenReturn(
+                new FlightSearchResponse(List.of()));
+
+        Map<String, Object> arguments = Map.of("origin", "LHR", "destination", "CDG", "departureDate", "2026-06-22");
+        client.searchFlights(arguments);
+
+        verify(requestSpec).uri(argThat((ArgumentMatcher<Function<UriBuilder, URI>>) f -> {
+            var uri = f.apply(UriComponentsBuilder.newInstance());
+            return uri.toString().startsWith("/api/v1/flights/search");
+        }));
     }
 
     @Test

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
@@ -97,6 +98,14 @@ public class GlobalExceptionHandler {
                                               final HttpServletRequest request) {
         log.error("Flight service error: {}", ex.getMessage(), ex);
         return buildErrorResponse(HttpStatus.BAD_GATEWAY, "Flight search service unavailable", request);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleNoResourceFound(final NoResourceFoundException ex,
+                                                final HttpServletRequest request) {
+        log.warn("Resource not found: {} {}", ex.getHttpMethod(), ex.getResourcePath());
+        return buildErrorResponse(HttpStatus.NOT_FOUND, "Resource not found", request);
     }
 
     @ExceptionHandler(Exception.class)

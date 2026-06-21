@@ -37,7 +37,7 @@ public class WeatherClient {
         try {
             var response = restClient.get()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/api/weather/forecast")
+                            .path("/api/v1/weather/forecast")
                             .queryParam("location", arguments.get("location"))
                             .queryParam("date", arguments.get("date"))
                             .build())

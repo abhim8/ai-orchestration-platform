@@ -37,7 +37,7 @@ public class FlightClient {
         try {
             var response = restClient.get()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/api/flights/search")
+                            .path("/api/v1/flights/search")
                             .queryParam("origin", arguments.get("origin"))
                             .queryParam("destination", arguments.get("destination"))
                             .queryParam("departureDate", arguments.get("departureDate"))

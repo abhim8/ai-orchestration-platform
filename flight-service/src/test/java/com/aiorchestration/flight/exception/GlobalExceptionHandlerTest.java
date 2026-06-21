@@ -18,6 +18,8 @@ import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.http.HttpMethod;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDate;
 import java.util.Set;
@@ -105,6 +107,17 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(502, response.getStatus());
         assertEquals("Flight search service unavailable", response.getMessage());
+    }
+
+    @Test
+    @DisplayName("should handle NoResourceFoundException with 404")
+    void shouldHandleNoResourceFound() {
+        var ex = new NoResourceFoundException(HttpMethod.GET, "/api/flights/search", "");
+
+        var response = handler.handleNoResourceFound(ex, request);
+
+        assertEquals(404, response.getStatus());
+        assertEquals("Resource not found", response.getMessage());
     }
 
     @Test

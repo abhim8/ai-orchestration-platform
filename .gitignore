@@ -1,0 +1,57 @@
+# Maven build output
+target/
+*/target/
+**/target/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env
+.env.*
+
+# Java
+*.class
+
+# Archives / Packages
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*
+
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+
+# BlueJ
+*.ctxt
+
+# Maven Wrapper (keep the wrapper jar)
+!.mvn/wrapper/maven-wrapper.jar

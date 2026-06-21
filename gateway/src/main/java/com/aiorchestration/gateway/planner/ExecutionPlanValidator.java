@@ -5,14 +5,9 @@ import com.aiorchestration.gateway.model.ExecutionPlan;
 import com.aiorchestration.gateway.model.ExecutionStep;
 import com.aiorchestration.gateway.model.PlanGenerationResult;
 import com.aiorchestration.gateway.registry.ToolRegistry;
-import java.util.ArrayDeque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.*;
 
 /**
  * Validates a {@link PlanGenerationResult} before execution begins.

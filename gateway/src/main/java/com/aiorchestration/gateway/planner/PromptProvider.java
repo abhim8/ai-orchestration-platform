@@ -1,6 +1,7 @@
 package com.aiorchestration.gateway.planner;
 
 import com.aiorchestration.gateway.model.PlanGenerationResult;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.converter.BeanOutputConverter;
@@ -15,6 +16,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class PromptProvider {
 
     private static final String PLANNING_TEMPLATE = """
@@ -41,10 +43,6 @@ public class PromptProvider {
         """;
 
     private final BeanOutputConverter<PlanGenerationResult> outputConverter;
-
-    public PromptProvider(BeanOutputConverter<PlanGenerationResult> outputConverter) {
-        this.outputConverter = outputConverter;
-    }
 
     /**
      * Builds the complete planning prompt for a given user message.

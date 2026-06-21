@@ -2,7 +2,6 @@ package com.aiorchestration.gateway.service;
 
 import com.aiorchestration.gateway.model.ExecutionPlan;
 import com.aiorchestration.gateway.model.ExecutionStep;
-import com.aiorchestration.gateway.model.StepResult;
 import com.aiorchestration.gateway.model.StepStatus;
 import com.aiorchestration.gateway.registry.ToolRegistry;
 import org.junit.jupiter.api.BeforeEach;

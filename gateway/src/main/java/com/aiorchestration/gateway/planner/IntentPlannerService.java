@@ -3,6 +3,7 @@ package com.aiorchestration.gateway.planner;
 import com.aiorchestration.gateway.exception.PlanGenerationException;
 import com.aiorchestration.gateway.model.ChatRequest;
 import com.aiorchestration.gateway.model.PlanGenerationResult;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.converter.BeanOutputConverter;
@@ -32,6 +33,7 @@ import java.util.UUID;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class IntentPlannerService {
 
     private static final String CONVERSATION_ID_KEY = "chat_memory_conversation_id";
@@ -39,14 +41,6 @@ public class IntentPlannerService {
     private final ChatClient chatClient;
     private final PromptProvider promptProvider;
     private final BeanOutputConverter<PlanGenerationResult> outputConverter;
-
-    public IntentPlannerService(final ChatClient chatClient,
-                                final PromptProvider promptProvider,
-                                final BeanOutputConverter<PlanGenerationResult> outputConverter) {
-        this.chatClient = chatClient;
-        this.promptProvider = promptProvider;
-        this.outputConverter = outputConverter;
-    }
 
     /**
      * Generates an execution plan from a user's natural-language request.

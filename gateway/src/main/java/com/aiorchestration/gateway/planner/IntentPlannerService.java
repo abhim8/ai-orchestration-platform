@@ -1,15 +1,12 @@
 package com.aiorchestration.gateway.planner;
 
 import com.aiorchestration.gateway.exception.PlanGenerationException;
-import com.aiorchestration.gateway.model.ChatRequest;
 import com.aiorchestration.gateway.model.PlanGenerationResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.stereotype.Service;
-
-import java.util.UUID;
 
 /**
  * Sole service responsible for interacting with Gemini via Spring AI.
@@ -45,16 +42,15 @@ public class IntentPlannerService {
     /**
      * Generates an execution plan from a user's natural-language request.
      *
-     * @param request the user's chat request, with an optional sessionId and
-     *                a required message
+     * @param conversationId the resolved conversation identifier (always a valid UUID)
+     * @param message        the user's natural language message
      * @return the generated plan with confidence, summary, and execution steps
      * @throws PlanGenerationException if the AI planner fails to produce a plan
      */
-    public PlanGenerationResult plan(final ChatRequest request) {
+    public PlanGenerationResult plan(final String conversationId, final String message) {
         log.debug("Planning for user message");
 
-        var prompt = promptProvider.buildPlanningPrompt(request.message());
-        var conversationId = resolveConversationId(request.sessionId());
+        var prompt = promptProvider.buildPlanningPrompt(message);
 
         try {
             var result = chatClient.prompt()
@@ -69,12 +65,5 @@ public class IntentPlannerService {
             log.warn("AI planning failed: {}", e.getMessage());
             throw new PlanGenerationException("Failed to generate execution plan", e);
         }
-    }
-
-    private static String resolveConversationId(final String sessionId) {
-        if (sessionId != null && !sessionId.isBlank()) {
-            return sessionId;
-        }
-        return UUID.randomUUID().toString();
     }
 }

@@ -3,6 +3,7 @@ package com.aiorchestration.gateway.exception;
 import com.aiorchestration.gateway.controller.ChatController;
 import com.aiorchestration.gateway.model.ChatRequest;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -47,9 +48,9 @@ class GlobalExceptionHandlerTest {
     @Test
     @DisplayName("should handle MethodArgumentNotValidException with field errors")
     void shouldHandleMethodArgumentNotValid() throws NoSuchMethodException {
-        var method = ChatController.class.getMethod("chat", ChatRequest.class);
+        var method = ChatController.class.getMethod("chat", String.class, ChatRequest.class, HttpServletResponse.class);
         var parameter = new MethodParameter(method, 0);
-        var target = new ChatRequest("session-1", "");
+        var target = new ChatRequest("");
         var bindingResult = new BeanPropertyBindingResult(target, "chatRequest");
         bindingResult.addError(new FieldError("chatRequest", "message", "", false,
                 new String[]{"NotBlank"}, null, "must not be blank"));

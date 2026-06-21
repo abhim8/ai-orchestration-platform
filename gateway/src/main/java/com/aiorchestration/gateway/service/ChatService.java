@@ -1,6 +1,5 @@
 package com.aiorchestration.gateway.service;
 
-import com.aiorchestration.gateway.model.ChatRequest;
 import com.aiorchestration.gateway.model.ChatResponse;
 import com.aiorchestration.gateway.planner.ExecutionPlanValidator;
 import com.aiorchestration.gateway.planner.IntentPlannerService;
@@ -33,13 +32,14 @@ public class ChatService {
      * Processes a user chat request through the full pipeline:
      * plan → (clarification if low confidence) → validate → execute → aggregate.
      *
-     * @param request the user's chat request
+     * @param conversationId the resolved conversation identifier (always a valid UUID)
+     * @param message        the user's natural language message
      * @return the chat response with execution results or clarification
      */
-    public ChatResponse chat(final ChatRequest request) {
-        log.debug("Processing chat request");
+    public ChatResponse chat(final String conversationId, final String message) {
+        log.debug("Processing chat request for conversationId={}", conversationId);
 
-        var result = plannerService.plan(request);
+        var result = plannerService.plan(conversationId, message);
 
         if (result.confidence() < clarificationThreshold) {
             log.debug("Clarification needed: confidence={}", result.confidence());

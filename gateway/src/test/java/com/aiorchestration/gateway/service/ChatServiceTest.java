@@ -1,35 +1,26 @@
 package com.aiorchestration.gateway.service;
 
-import com.aiorchestration.gateway.model.ChatRequest;
-import com.aiorchestration.gateway.model.ChatResponse;
-import com.aiorchestration.gateway.model.ExecutionPlan;
-import com.aiorchestration.gateway.model.ExecutionStep;
-import com.aiorchestration.gateway.model.PlanGenerationResult;
-import com.aiorchestration.gateway.model.StepResult;
-import com.aiorchestration.gateway.model.StepStatus;
+import com.aiorchestration.gateway.model.*;
 import com.aiorchestration.gateway.planner.ExecutionPlanValidator;
 import com.aiorchestration.gateway.planner.IntentPlannerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ChatServiceTest {
 
-    private static final String SESSION_ID = "session-1";
+    private static final String CONVERSATION_ID = "550e8400-e29b-41d4-a716-446655440000";
     private static final String MESSAGE = "book a flight and check weather";
 
     @Mock
@@ -46,13 +37,10 @@ class ChatServiceTest {
 
     private ChatService chatService;
 
-    private ChatRequest request;
-
     @BeforeEach
     void setUp() {
         chatService = new ChatService(plannerService, planValidator, executionEngine, aggregator);
         ReflectionTestUtils.setField(chatService, "clarificationThreshold", 0.5);
-        request = new ChatRequest(SESSION_ID, MESSAGE);
     }
 
     @Test
@@ -67,11 +55,11 @@ class ChatServiceTest {
         var expectedResponse = new ChatResponse(false, List.of("step-1"), List.of(),
                 stepResults, null, "Plan summary", false, null);
 
-        when(plannerService.plan(request)).thenReturn(planResult);
+        when(plannerService.plan(CONVERSATION_ID, MESSAGE)).thenReturn(planResult);
         when(executionEngine.execute(plan)).thenReturn(stepResults);
         when(aggregator.aggregate(planResult, stepResults)).thenReturn(expectedResponse);
 
-        var response = chatService.chat(request);
+        var response = chatService.chat(CONVERSATION_ID, MESSAGE);
 
         assertNotNull(response);
         assertEquals(expectedResponse, response);
@@ -87,9 +75,9 @@ class ChatServiceTest {
         var plan = new ExecutionPlan(steps);
         var planResult = new PlanGenerationResult(0.3, "I need more details", plan);
 
-        when(plannerService.plan(request)).thenReturn(planResult);
+        when(plannerService.plan(CONVERSATION_ID, MESSAGE)).thenReturn(planResult);
 
-        var response = chatService.chat(request);
+        var response = chatService.chat(CONVERSATION_ID, MESSAGE);
 
         assertTrue(response.clarificationRequired());
         assertEquals("I need more details", response.clarificationMessage());
@@ -112,11 +100,11 @@ class ChatServiceTest {
         var expectedResponse = new ChatResponse(false, List.of("step-1"), List.of(),
                 stepResults, null, "Plan summary", false, null);
 
-        when(plannerService.plan(request)).thenReturn(planResult);
+        when(plannerService.plan(CONVERSATION_ID, MESSAGE)).thenReturn(planResult);
         when(executionEngine.execute(plan)).thenReturn(stepResults);
         when(aggregator.aggregate(planResult, stepResults)).thenReturn(expectedResponse);
 
-        var response = chatService.chat(request);
+        var response = chatService.chat(CONVERSATION_ID, MESSAGE);
 
         assertFalse(response.clarificationRequired());
         verify(planValidator).validate(planResult);
@@ -125,10 +113,10 @@ class ChatServiceTest {
     @Test
     @DisplayName("should propagate PlanGenerationException from planner")
     void shouldPropagatePlannerException() {
-        when(plannerService.plan(request)).thenThrow(new RuntimeException("AI failure"));
+        when(plannerService.plan(CONVERSATION_ID, MESSAGE)).thenThrow(new RuntimeException("AI failure"));
 
         try {
-            chatService.chat(request);
+            chatService.chat(CONVERSATION_ID, MESSAGE);
         } catch (RuntimeException e) {
             assertEquals("AI failure", e.getMessage());
         }

@@ -1,19 +1,22 @@
 package com.aiorchestration.gateway.controller;
 
+import com.aiorchestration.common.constant.Headers;
+import com.aiorchestration.common.context.ConversationContext;
 import com.aiorchestration.gateway.model.ChatRequest;
 import com.aiorchestration.gateway.model.ChatResponse;
 import com.aiorchestration.gateway.service.ChatService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 /**
  * REST controller exposing the chat endpoint.
- * Delegates all processing to {@link ChatService}.
+ * Resolves the conversation identifier from the X-Conversation-Id header
+ * and delegates all processing to {@link ChatService}.
  */
 @Slf4j
 @RestController
@@ -24,10 +27,33 @@ public class ChatController {
     private final ChatService chatService;
 
     @PostMapping
-    public ChatResponse chat(@RequestBody @Valid final ChatRequest request) {
-        log.debug("Received chat request: sessionId={}", request.sessionId());
-        var response = chatService.chat(request);
-        log.debug("Chat delegation completed: clarificationRequired={}", response.clarificationRequired());
-        return response;
+    public ChatResponse chat(
+            @RequestHeader(value = Headers.X_CONVERSATION_ID, required = false) final String conversationIdHeader,
+            @RequestBody @Valid final ChatRequest request,
+            final HttpServletResponse servletResponse) {
+
+        var conversationId = resolveConversationId(conversationIdHeader);
+
+        ConversationContext.setConversationId(conversationId);
+        servletResponse.setHeader(Headers.X_CONVERSATION_ID, conversationId);
+
+        log.debug("Received chat request: conversationId={}", conversationId);
+
+        try {
+            return chatService.chat(conversationId, request.message());
+        } finally {
+            ConversationContext.clear();
+        }
+    }
+
+    static String resolveConversationId(final String headerValue) {
+        if (headerValue != null && !headerValue.isBlank()) {
+            try {
+                UUID.fromString(headerValue.trim());
+                return headerValue.trim();
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        return UUID.randomUUID().toString();
     }
 }

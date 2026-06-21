@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "AI Orchestration Platform",
-    "description": "AI-powered orchestration platform that uses Google Gemini to interpret natural language requests, generate execution plans, and delegate work to downstream microservices (flight search, weather forecast).\n\n## Architecture\n\n- **Gateway** (port 8080) — AI planning + execution engine. Accepts natural language via POST /api/v1/chat, delegates to flight-service and weather-service.\n- **Flight Service** (port 8081) — Flight search via GET /api/v1/flights/search.\n- **Weather Service** (port 8082) — Weather forecast via GET /api/v1/weather/forecast.\n\n## Getting Started\n\n1. Ensure all three services are running.\n2. Set `GEMINI_API_KEY` environment variable (required by the gateway).\n3. Send requests — the pre-request script auto-generates `traceId` and `sessionId`.\n4. Repeat requests with the same `sessionId` to test multi-turn conversation memory.",
+    "description": "AI-powered orchestration platform that uses Google Gemini to interpret natural language requests, generate execution plans, and delegate work to downstream microservices (flight search, weather forecast).\n\n## Architecture\n\n- **Gateway** (port 8080) — AI planning + execution engine. Accepts natural language via POST /api/v1/chat, delegates to flight-service and weather-service.\n- **Flight Service** (port 8081) — Flight search via GET /api/v1/flights/search.\n- **Weather Service** (port 8082) — Weather forecast via GET /api/v1/weather/forecast.\n\n## Getting Started\n\n1. Ensure all three services are running.\n2. Set `GEMINI_API_KEY` environment variable (required by the gateway).\n3. Send requests — the pre-request script auto-generates `traceId` and `conversationId`.\n4. Repeat requests with the same `X-Conversation-Id` header value to test multi-turn conversation memory.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "version": "v1"
   },
@@ -23,11 +23,15 @@
               {
                 "key": "X-Trace-Id",
                 "value": "{{traceId}}"
+              },
+              {
+                "key": "X-Conversation-Id",
+                "value": "{{conversationId}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"message\": \"Find flights from Bangalore to Tokyo next Friday and check the weather in Tokyo.\"\n}"
+              "raw": "{\n  \"message\": \"Find flights from Bangalore to Tokyo next Friday and check the weather in Tokyo.\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/chat",
@@ -48,12 +52,16 @@
                 {
                   "key": "X-Trace-Id",
                   "value": "{{traceId}}"
+                },
+                {
+                  "key": "X-Conversation-Id",
+                  "value": "{{conversationId}}"
                 }
               ],
               "body": "{\n  \"partialSuccess\": false,\n  \"completedSteps\": [\"step-1\", \"step-2\"],\n  \"failedSteps\": [],\n  \"executionTrace\": [\n    {\n      \"stepId\": \"step-1\",\n      \"tool\": \"flight.search\",\n      \"status\": \"SUCCESS\",\n      \"data\": {\n        \"flights\": [\n          {\n            \"airline\": \"Air France\",\n            \"flightNumber\": \"AF123\",\n            \"origin\": \"BLR\",\n            \"destination\": \"NRT\",\n            \"departureDate\": \"2026-06-26\",\n            \"price\": 450.00,\n            \"currency\": \"USD\"\n          },\n          {\n            \"airline\": \"Lufthansa\",\n            \"flightNumber\": \"LH456\",\n            \"origin\": \"BLR\",\n            \"destination\": \"NRT\",\n            \"departureDate\": \"2026-06-26\",\n            \"price\": 520.00,\n            \"currency\": \"USD\"\n          }\n        ]\n      },\n      \"error\": null,\n      \"latencyMs\": 450\n    },\n    {\n      \"stepId\": \"step-2\",\n      \"tool\": \"weather.forecast\",\n      \"status\": \"SUCCESS\",\n      \"data\": {\n        \"location\": \"Tokyo\",\n        \"date\": \"2026-06-26\",\n        \"temperatureCelsius\": 25.4,\n        \"condition\": \"Partly cloudy\",\n        \"humidityPercent\": 65,\n        \"windSpeedKph\": 15.3\n      },\n      \"error\": null,\n      \"latencyMs\": 320\n    }\n  ],\n  \"response\": null,\n  \"summary\": \"Found 2 flights from Bangalore to Tokyo on June 26. Weather in Tokyo: 25.4°C, partly cloudy.\",\n  \"clarificationRequired\": false,\n  \"clarificationMessage\": null\n}"
             }
           ],
-          "event": [
+            "event": [
             {
               "listen": "test",
               "script": {
@@ -66,6 +74,13 @@
                   "});",
                   "pm.test(\"X-Trace-Id response header exists\", () => {",
                   "    pm.response.to.have.header(\"X-Trace-Id\");",
+                  "});",
+                  "pm.test(\"X-Conversation-Id response header exists\", () => {",
+                  "    pm.response.to.have.header(\"X-Conversation-Id\");",
+                  "});",
+                  "pm.test(\"X-Conversation-Id is a valid UUID\", () => {",
+                  "    const val = pm.response.headers.get(\"X-Conversation-Id\");",
+                  "    pm.expect(val).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -86,11 +101,15 @@
               {
                 "key": "X-Trace-Id",
                 "value": "{{traceId}}"
+              },
+              {
+                "key": "X-Conversation-Id",
+                "value": "{{conversationId}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"message\": \"What is the weather in London tomorrow?\"\n}"
+              "raw": "{\n  \"message\": \"What is the weather in London tomorrow?\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/chat",
@@ -129,6 +148,13 @@
                   "});",
                   "pm.test(\"X-Trace-Id response header exists\", () => {",
                   "    pm.response.to.have.header(\"X-Trace-Id\");",
+                  "});",
+                  "pm.test(\"X-Conversation-Id response header exists\", () => {",
+                  "    pm.response.to.have.header(\"X-Conversation-Id\");",
+                  "});",
+                  "pm.test(\"X-Conversation-Id is a valid UUID\", () => {",
+                  "    const val = pm.response.headers.get(\"X-Conversation-Id\");",
+                  "    pm.expect(val).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -149,11 +175,15 @@
               {
                 "key": "X-Trace-Id",
                 "value": "{{traceId}}"
+              },
+              {
+                "key": "X-Conversation-Id",
+                "value": "{{conversationId}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"message\": \"Find flights from Mumbai to Dubai next Tuesday.\"\n}"
+              "raw": "{\n  \"message\": \"Find flights from Mumbai to Dubai next Tuesday.\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/chat",
@@ -192,6 +222,13 @@
                   "});",
                   "pm.test(\"X-Trace-Id response header exists\", () => {",
                   "    pm.response.to.have.header(\"X-Trace-Id\");",
+                  "});",
+                  "pm.test(\"X-Conversation-Id response header exists\", () => {",
+                  "    pm.response.to.have.header(\"X-Conversation-Id\");",
+                  "});",
+                  "pm.test(\"X-Conversation-Id is a valid UUID\", () => {",
+                  "    const val = pm.response.headers.get(\"X-Conversation-Id\");",
+                  "    pm.expect(val).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -202,7 +239,7 @@
         {
           "name": "Chat — Multi-turn Conversation",
           "request": {
-            "description": "Follow-up turn in an existing conversation. Reuses the same sessionId so the AI remembers previous context (the flight search from the earlier turn) and can answer a related question.",
+            "description": "Follow-up turn in an existing conversation. Reuse the same X-Conversation-Id header so the AI remembers previous context (the flight search from the earlier turn) and can answer a related question.",
             "method": "POST",
             "header": [
               {
@@ -212,11 +249,15 @@
               {
                 "key": "X-Trace-Id",
                 "value": "{{traceId}}"
+              },
+              {
+                "key": "X-Conversation-Id",
+                "value": "{{conversationId}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"message\": \"Now check the weather in Singapore for the same day.\"\n}"
+              "raw": "{\n  \"message\": \"Now check the weather in Singapore for the same day.\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/chat",
@@ -275,11 +316,15 @@
               {
                 "key": "X-Trace-Id",
                 "value": "{{traceId}}"
+              },
+              {
+                "key": "X-Conversation-Id",
+                "value": "{{conversationId}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"message\": \"Plan a trip for me.\"\n}"
+              "raw": "{\n  \"message\": \"Plan a trip for me.\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/chat",
@@ -319,6 +364,13 @@
                   "pm.test(\"X-Trace-Id response header exists\", () => {",
                   "    pm.response.to.have.header(\"X-Trace-Id\");",
                   "});",
+                  "pm.test(\"X-Conversation-Id response header exists\", () => {",
+                  "    pm.response.to.have.header(\"X-Conversation-Id\");",
+                  "});",
+                  "pm.test(\"X-Conversation-Id is a valid UUID\", () => {",
+                  "    const val = pm.response.headers.get(\"X-Conversation-Id\");",
+                  "    pm.expect(val).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);",
+                  "});",
                   "pm.test(\"clarificationRequired is true\", () => {",
                   "    const json = pm.response.json();",
                   "    pm.expect(json.clarificationRequired).to.be.true;",
@@ -342,11 +394,15 @@
               {
                 "key": "X-Trace-Id",
                 "value": "{{traceId}}"
+              },
+              {
+                "key": "X-Conversation-Id",
+                "value": "{{conversationId}}"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"message\": \"\"\n}"
+              "raw": "{\n  \"message\": \"\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/chat",
@@ -386,6 +442,13 @@
                   "pm.test(\"X-Trace-Id response header exists\", () => {",
                   "    pm.response.to.have.header(\"X-Trace-Id\");",
                   "});",
+                  "pm.test(\"X-Conversation-Id response header exists\", () => {",
+                  "    pm.response.to.have.header(\"X-Conversation-Id\");",
+                  "});",
+                  "pm.test(\"X-Conversation-Id is a valid UUID\", () => {",
+                  "    const val = pm.response.headers.get(\"X-Conversation-Id\");",
+                  "    pm.expect(val).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);",
+                  "});",
                   "pm.test(\"traceId in JSON body is non-empty\", () => {",
                   "    const json = pm.response.json();",
                   "    pm.expect(json.traceId).to.not.be.empty;",
@@ -413,8 +476,8 @@
               "if (!pm.collectionVariables.get(\"traceId\")) {",
               "    pm.collectionVariables.set(\"traceId\", pm.variables.replaceIn(\"{{$uuid}}\"));",
               "}",
-              "if (!pm.collectionVariables.get(\"sessionId\")) {",
-              "    pm.collectionVariables.set(\"sessionId\", pm.variables.replaceIn(\"{{$uuid}}\"));",
+              "if (!pm.collectionVariables.get(\"conversationId\")) {",
+              "    pm.collectionVariables.set(\"conversationId\", pm.variables.replaceIn(\"{{$uuid}}\"));",
               "}"
             ],
             "type": "text/javascript"
@@ -774,7 +837,7 @@
       "type": "string"
     },
     {
-      "key": "sessionId",
+      "key": "conversationId",
       "value": "",
       "type": "string"
     }

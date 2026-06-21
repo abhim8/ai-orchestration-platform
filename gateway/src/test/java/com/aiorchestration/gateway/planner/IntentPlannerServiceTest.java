@@ -1,7 +1,6 @@
 package com.aiorchestration.gateway.planner;
 
 import com.aiorchestration.gateway.exception.PlanGenerationException;
-import com.aiorchestration.gateway.model.ChatRequest;
 import com.aiorchestration.gateway.model.ExecutionPlan;
 import com.aiorchestration.gateway.model.ExecutionStep;
 import com.aiorchestration.gateway.model.PlanGenerationResult;
@@ -20,15 +19,13 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class IntentPlannerServiceTest {
 
+    private static final String CONVERSATION_ID = "550e8400-e29b-41d4-a716-446655440000";
     private static final String TEST_MESSAGE = "book a flight from London to Paris tomorrow";
-    private static final String TEST_SESSION_ID = "session-123";
     private static final String TEST_PROMPT = "prompt-text";
 
     @Mock
@@ -73,8 +70,7 @@ class IntentPlannerServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.entity(outputConverter)).thenReturn(expectedResult);
 
-        var request = new ChatRequest(TEST_SESSION_ID, TEST_MESSAGE);
-        var result = service.plan(request);
+        var result = service.plan(CONVERSATION_ID, TEST_MESSAGE);
 
         assertNotNull(result);
         assertEquals(0.95, result.confidence());
@@ -88,8 +84,8 @@ class IntentPlannerServiceTest {
     }
 
     @Test
-    @DisplayName("should use sessionId as conversation ID when provided")
-    void shouldUseSessionIdAsConversationId() {
+    @DisplayName("should use provided conversationId for Spring AI advisor")
+    void shouldUseProvidedConversationId() {
         when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
         when(chatClient.prompt()).thenReturn(requestSpec);
         when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
@@ -97,8 +93,7 @@ class IntentPlannerServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.entity(outputConverter)).thenReturn(expectedResult);
 
-        var request = new ChatRequest(TEST_SESSION_ID, TEST_MESSAGE);
-        service.plan(request);
+        service.plan(CONVERSATION_ID, TEST_MESSAGE);
 
         verify(requestSpec).advisors(advisorCaptor.capture());
         var advisorConsumer = advisorCaptor.getValue();
@@ -106,29 +101,7 @@ class IntentPlannerServiceTest {
         var advisorSpec = mock(ChatClient.AdvisorSpec.class);
         advisorConsumer.accept(advisorSpec);
 
-        verify(advisorSpec).param("chat_memory_conversation_id", TEST_SESSION_ID);
-    }
-
-    @Test
-    @DisplayName("should generate random conversation ID when no sessionId")
-    void shouldGenerateRandomIdWhenNoSessionId() {
-        when(promptProvider.buildPlanningPrompt(TEST_MESSAGE)).thenReturn(TEST_PROMPT);
-        when(chatClient.prompt()).thenReturn(requestSpec);
-        when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
-        when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
-        when(requestSpec.call()).thenReturn(callResponseSpec);
-        when(callResponseSpec.entity(outputConverter)).thenReturn(expectedResult);
-
-        var request = new ChatRequest(null, TEST_MESSAGE);
-        service.plan(request);
-
-        verify(requestSpec).advisors(advisorCaptor.capture());
-        var advisorConsumer = advisorCaptor.getValue();
-
-        var advisorSpec = mock(ChatClient.AdvisorSpec.class);
-        advisorConsumer.accept(advisorSpec);
-
-        verify(advisorSpec).param(eq("chat_memory_conversation_id"), anyString());
+        verify(advisorSpec).param("chat_memory_conversation_id", CONVERSATION_ID);
     }
 
     @Test
@@ -140,10 +113,8 @@ class IntentPlannerServiceTest {
         when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
         when(requestSpec.call()).thenThrow(new RuntimeException("API error"));
 
-        var request = new ChatRequest(TEST_SESSION_ID, TEST_MESSAGE);
-
         var exception = assertThrows(PlanGenerationException.class,
-                () -> service.plan(request));
+                () -> service.plan(CONVERSATION_ID, TEST_MESSAGE));
         assertTrue(exception.getMessage().contains("Failed to generate execution plan"));
         assertNotNull(exception.getCause());
     }
@@ -158,8 +129,7 @@ class IntentPlannerServiceTest {
         when(requestSpec.call()).thenReturn(callResponseSpec);
         when(callResponseSpec.entity(outputConverter)).thenReturn(expectedResult);
 
-        var request = new ChatRequest(TEST_SESSION_ID, TEST_MESSAGE);
-        service.plan(request);
+        service.plan(CONVERSATION_ID, TEST_MESSAGE);
 
         verify(promptProvider).buildPlanningPrompt(TEST_MESSAGE);
     }

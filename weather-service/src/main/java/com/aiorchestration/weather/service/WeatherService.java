@@ -1,6 +1,6 @@
 package com.aiorchestration.weather.service;
 
-import com.aiorchestration.weather.client.OpenWeatherMapClient;
+import com.aiorchestration.weather.client.OpenMeteoClient;
 import com.aiorchestration.weather.model.WeatherForecastRequest;
 import com.aiorchestration.weather.model.WeatherForecastResponse;
 import lombok.RequiredArgsConstructor;
@@ -12,12 +12,12 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class WeatherService {
 
-    private final OpenWeatherMapClient openWeatherMapClient;
+    private final OpenMeteoClient openMeteoClient;
 
     public WeatherForecastResponse getForecast(final WeatherForecastRequest request) {
         log.debug("Delegating weather forecast: location={} date={}",
                 request.location(), request.date());
 
-        return openWeatherMapClient.getForecast(request.location(), request.date());
+        return openMeteoClient.getForecast(request.location(), request.date());
     }
 }

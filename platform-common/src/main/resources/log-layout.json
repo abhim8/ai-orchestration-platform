@@ -1,0 +1,48 @@
+{
+  "level": {
+    "$resolver": "level",
+    "field": "name"
+  },
+  "timestamp": {
+    "$resolver": "timestamp",
+    "pattern": {
+      "format": "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"
+    }
+  },
+  "method": {
+    "$resolver": "source",
+    "field": "methodName"
+  },
+  "logger": {
+    "$resolver": "logger",
+    "field": "name"
+  },
+  "line": {
+    "$resolver": "source",
+    "field": "lineNumber"
+  },
+  "message": {
+    "$resolver": "message",
+    "stringified": true
+  },
+  "labels": {
+    "$resolver": "mdc",
+    "flatten": true,
+    "stringified": true
+  },
+  "thread": {
+    "$resolver": "thread",
+    "field": "name"
+  },
+  "error_message": {
+    "$resolver": "exception",
+    "field": "message"
+  },
+  "error_stack_trace": {
+    "$resolver": "exception",
+    "field": "stackTrace",
+    "stackTrace": {
+      "stringified": true
+    }
+  }
+}

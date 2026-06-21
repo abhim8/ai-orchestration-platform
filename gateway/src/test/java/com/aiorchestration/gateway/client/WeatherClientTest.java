@@ -1,0 +1,102 @@
+package com.aiorchestration.gateway.client;
+
+import com.aiorchestration.gateway.exception.DownstreamServiceException;
+import com.aiorchestration.gateway.model.WeatherForecastResponse;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.client.RestClient;
+
+import java.util.Map;
+import java.util.function.Function;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class WeatherClientTest {
+
+    @Mock
+    private RestClient.Builder builder;
+
+    @Mock
+    private RestClient restClient;
+
+    @Mock
+    private RestClient.RequestHeadersUriSpec requestSpec;
+
+    @Mock
+    private RestClient.ResponseSpec responseSpec;
+
+    private WeatherClient client;
+
+    @BeforeEach
+    void setUp() {
+        when(builder.baseUrl("http://localhost:8082")).thenReturn(builder);
+        when(builder.build()).thenReturn(restClient);
+        client = new WeatherClient(builder, "http://localhost:8082");
+    }
+
+    @Test
+    @DisplayName("should return weather forecast on success")
+    void shouldReturnWeatherForecast() {
+        var expected = new WeatherForecastResponse("Paris", "2026-06-22", "Sunny", 25.0);
+
+        when(restClient.get()).thenReturn(requestSpec);
+        when(requestSpec.uri(any(Function.class))).thenReturn(requestSpec);
+        when(requestSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(WeatherForecastResponse.class)).thenReturn(expected);
+
+        Map<String, Object> arguments = Map.of("location", "Paris", "date", "2026-06-22");
+        var result = client.getForecast(arguments);
+
+        assertNotNull(result);
+        assertEquals("Paris", result.location());
+        assertEquals("Sunny", result.condition());
+        assertEquals(25.0, result.temperature());
+    }
+
+    @Test
+    @DisplayName("should throw DownstreamServiceException on network error")
+    void shouldThrowOnNetworkError() {
+        when(restClient.get()).thenThrow(new RuntimeException("Connection refused"));
+
+        Map<String, Object> arguments = Map.of("location", "Paris", "date", "2026-06-22");
+
+        var ex = assertThrows(DownstreamServiceException.class,
+                () -> client.getForecast(arguments));
+        assertTrue(ex.getMessage().contains("Weather forecast failed"));
+    }
+
+    @Test
+    @DisplayName("should throw DownstreamServiceException on non-2xx response")
+    void shouldThrowOnNon2xx() {
+        when(restClient.get()).thenReturn(requestSpec);
+        when(requestSpec.uri(any(Function.class))).thenReturn(requestSpec);
+        when(requestSpec.retrieve()).thenThrow(new RuntimeException("500 Internal Server Error"));
+
+        Map<String, Object> arguments = Map.of("location", "Paris", "date", "2026-06-22");
+
+        var ex = assertThrows(DownstreamServiceException.class,
+                () -> client.getForecast(arguments));
+        assertTrue(ex.getMessage().contains("Weather forecast failed"));
+    }
+
+    @Test
+    @DisplayName("should return null when downstream returns null")
+    void shouldReturnNullOnNullResponse() {
+        when(restClient.get()).thenReturn(requestSpec);
+        when(requestSpec.uri(any(Function.class))).thenReturn(requestSpec);
+        when(requestSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(WeatherForecastResponse.class)).thenReturn(null);
+
+        Map<String, Object> arguments = Map.of("location", "Paris", "date", "2026-06-22");
+        var result = client.getForecast(arguments);
+
+        assertNull(result);
+    }
+}

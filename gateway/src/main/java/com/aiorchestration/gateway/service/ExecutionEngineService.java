@@ -19,7 +19,7 @@ import java.util.concurrent.Executor;
  * <p>Execution model:
  * <ol>
  *   <li>Compute a topological ordering of steps using Kahn's algorithm</li>
- *   <li>Build futures for each step in that order — steps with no
+ *   <li>Build futures for each step in that order - steps with no
  *       unsatisfied dependencies produce futures immediately; steps
  *       with dependencies produce futures chained on their ancestors</li>
  *   <li>Collect all results by joining the futures</li>

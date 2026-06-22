@@ -15,7 +15,7 @@ import java.util.*;
 /**
  * Validates a {@link PlanGenerationResult} before execution begins.
  *
- * <p>Performs deterministic validation only — no tool execution, no
+ * <p>Performs deterministic validation only - no tool execution, no
  * Spring AI calls, no downstream services, no plan modification.
  *
  * <p>Cycle detection uses <b>Kahn's algorithm</b> (topological sort):

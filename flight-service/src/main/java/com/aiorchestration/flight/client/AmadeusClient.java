@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Client for the Amadeus flight search API.
  *
- * <p>Currently mocked — logs the request and returns deterministic data.
+ * <p>Currently mocked - logs the request and returns deterministic data.
  * To connect to the real API, swap the mock logic inside {@link #search}
  * for a real RestClient call while keeping the same method signature.
  */

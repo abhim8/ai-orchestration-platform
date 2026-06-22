@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 /**
- * Client for the downstream flight-service. Thin REST adapter —
+ * Client for the downstream flight-service. Thin REST adapter -
  * no business logic, no AI logic, no aggregation.
  */
 @Slf4j

@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/flights")
 public class FlightController {
 
-    private final FlightService ;
+    private final FlightService flightService;
 
     @GetMapping("/search")
     public FlightSearchResponse search(@Valid final FlightSearchRequest request) {

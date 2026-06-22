@@ -32,15 +32,6 @@ graph TB
     Aggregator -->|response| Gateway
     Gateway -->|ChatResponse| Client
 
-    style Client fill:#e1f5fe
-    style Gateway fill:#fff3e0
-    style Gemini fill:#e8f5e9
-    style Planner fill:#fff8e1
-    style Validator fill:#f1f8e9
-    style Engine fill:#fce4ec
-    style Aggregator fill:#e8eaf6
-    style Flight fill:#fce4ec
-    style Weather fill:#f3e5f5
 ```
 
 ## How It Works

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/flights")
 public class FlightController {
-
+//   private static final String SEARCH_ENDPOINT = "/search";
     private final FlightService flightService;
 
     @GetMapping("/search")

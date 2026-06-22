@@ -14,9 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ExecutionPlanValidatorTest {
 
@@ -133,6 +131,46 @@ class ExecutionPlanValidatorTest {
 
         var ex = assertThrows(PlanValidationException.class, () -> validator.validate(result));
         assertEquals("Duplicate stepId detected: 1", ex.getMessage());
+    }
+
+    // ---- Internal planning tools forbidden ----
+
+    @Test
+    @DisplayName("should reject resolveRelativeDate as an execution step")
+    void shouldRejectResolveRelativeDateStep() {
+        var steps = List.of(
+            step("1", "resolveRelativeDate", Map.of("relativeDateExpression", "next Friday"), List.of())
+        );
+        var result = validResult(new ExecutionPlan(steps));
+
+        var ex = assertThrows(PlanValidationException.class, () -> validator.validate(result));
+        assertEquals("Planner produced internal helper tool 'resolveRelativeDate' in the final execution plan. Internal planning tools must not be executable steps.", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("should reject plan mixing resolveRelativeDate with real tools")
+    void shouldRejectMixedPlanWithResolveRelativeDate() {
+        var steps = List.of(
+            step("1", "resolveRelativeDate", Map.of("relativeDateExpression", "next Friday"), List.of()),
+            step("2", "flight.search", Map.of("origin", "LHR", "destination", "CDG", "departureDate", "2026-06-26"), List.of("1"))
+        );
+        var result = validResult(new ExecutionPlan(steps));
+
+        var ex = assertThrows(PlanValidationException.class, () -> validator.validate(result));
+        assertEquals("Planner produced internal helper tool 'resolveRelativeDate' in the final execution plan. Internal planning tools must not be executable steps.", ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("should report internal planning tool before unknown tool")
+    void shouldReportInternalToolBeforeUnknownTool() {
+        var steps = List.of(
+            step("1", "resolveRelativeDate", Map.of("relativeDateExpression", "tomorrow"), List.of()),
+            step("2", "nonexistent.tool", Map.of(), List.of())
+        );
+        var result = validResult(new ExecutionPlan(steps));
+
+        var ex = assertThrows(PlanValidationException.class, () -> validator.validate(result));
+        assertEquals("Planner produced internal helper tool 'resolveRelativeDate' in the final execution plan. Internal planning tools must not be executable steps.", ex.getMessage());
     }
 
     // ---- Unknown tool ----

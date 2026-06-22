@@ -55,6 +55,8 @@ class IntentPlannerServiceTest {
 
     private IntentPlannerService service;
 
+    private static final String RAW_JSON = "{\"confidence\":0.95,\"summary\":\"Book flight\",\"executionPlan\":{\"steps\":[{\"stepId\":\"step-1\",\"tool\":\"flight.search\"}]}}";
+
     private PlanGenerationResult expectedResult;
 
     @BeforeEach
@@ -75,7 +77,8 @@ class IntentPlannerServiceTest {
         when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
         when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
         when(requestSpec.call()).thenReturn(callResponseSpec);
-        when(callResponseSpec.entity(outputConverter)).thenReturn(expectedResult);
+        when(callResponseSpec.content()).thenReturn(RAW_JSON);
+        when(outputConverter.convert(RAW_JSON)).thenReturn(expectedResult);
 
         var result = service.plan(CONVERSATION_ID, TEST_MESSAGE);
 
@@ -87,7 +90,8 @@ class IntentPlannerServiceTest {
         verify(promptProvider).buildPlanningPrompt(TEST_MESSAGE);
         verify(requestSpec).user(TEST_PROMPT);
         verify(requestSpec).call();
-        verify(callResponseSpec).entity(outputConverter);
+        verify(callResponseSpec).content();
+        verify(outputConverter).convert(RAW_JSON);
     }
 
     @Test
@@ -98,7 +102,8 @@ class IntentPlannerServiceTest {
         when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
         when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
         when(requestSpec.call()).thenReturn(callResponseSpec);
-        when(callResponseSpec.entity(outputConverter)).thenReturn(expectedResult);
+        when(callResponseSpec.content()).thenReturn(RAW_JSON);
+        when(outputConverter.convert(RAW_JSON)).thenReturn(expectedResult);
 
         service.plan(CONVERSATION_ID, TEST_MESSAGE);
 
@@ -332,7 +337,8 @@ class IntentPlannerServiceTest {
         when(requestSpec.user(TEST_PROMPT)).thenReturn(requestSpec);
         when(requestSpec.advisors(any(Consumer.class))).thenReturn(requestSpec);
         when(requestSpec.call()).thenReturn(callResponseSpec);
-        when(callResponseSpec.entity(outputConverter)).thenReturn(expectedResult);
+        when(callResponseSpec.content()).thenReturn(RAW_JSON);
+        when(outputConverter.convert(RAW_JSON)).thenReturn(expectedResult);
 
         service.plan(CONVERSATION_ID, TEST_MESSAGE);
 

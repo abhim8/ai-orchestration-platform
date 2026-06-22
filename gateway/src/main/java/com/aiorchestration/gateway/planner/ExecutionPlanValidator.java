@@ -53,6 +53,7 @@ public class ExecutionPlanValidator {
         var steps = result.executionPlan().steps();
         validateStepsNonEmpty(steps);
         validateNoDuplicateStepIds(steps);
+        validateNoInternalPlanningTools(steps);
         validateToolsExist(steps);
         validateRequiredArguments(steps);
         validateDependsOnReferences(steps);
@@ -111,7 +112,20 @@ public class ExecutionPlanValidator {
         }
     }
 
-    // ---- 4. Tool existence ----
+    // ---- 4. Internal planning tools forbidden ----
+
+    private static void validateNoInternalPlanningTools(final List<ExecutionStep> steps) {
+        for (var step : steps) {
+            if ("resolveRelativeDate".equals(step.tool())) {
+                log.warn("Validation failed: internal planning tool '{}' appears in execution plan", step.tool());
+                throw new PlanValidationException(
+                    "Planner produced internal helper tool 'resolveRelativeDate' in the final execution plan. Internal planning tools must not be executable steps."
+                );
+            }
+        }
+    }
+
+    // ---- 5. Tool existence ----
 
     private void validateToolsExist(final List<ExecutionStep> steps) {
         for (var step : steps) {
@@ -122,7 +136,7 @@ public class ExecutionPlanValidator {
         }
     }
 
-    // ---- 5. Required arguments ----
+    // ---- 6. Required arguments ----
 
     private void validateRequiredArguments(final List<ExecutionStep> steps) {
         for (var step : steps) {
@@ -138,7 +152,7 @@ public class ExecutionPlanValidator {
         }
     }
 
-    // ---- 6. dependsOn references ----
+    // ---- 7. dependsOn references ----
 
     private static void validateDependsOnReferences(final List<ExecutionStep> steps) {
         var allStepIds = new HashSet<String>();
@@ -159,7 +173,7 @@ public class ExecutionPlanValidator {
         }
     }
 
-    // ---- 7. Cycle detection (Kahn's algorithm) ----
+    // ---- 8. Cycle detection (Kahn's algorithm) ----
 
     private static void validateNoCycles(final List<ExecutionStep> steps) {
         /*

@@ -15,6 +15,8 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 
+import java.util.Objects;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -39,11 +41,17 @@ public class IntentPlannerService {
         var startNanos = System.nanoTime();
 
         try {
-            var result = chatClient.prompt()
+            var callResponse = chatClient.prompt()
                     .user(prompt)
                     .advisors(a -> a.param(CONVERSATION_ID_KEY, conversationId))
-                    .call()
-                    .entity(outputConverter);
+                    .call();
+
+            var rawContent = Objects.requireNonNull(callResponse.content());
+            log.debug("Raw planner output: conversationId={}, rawContent={}", conversationId, rawContent);
+
+            var result = outputConverter.convert(rawContent);
+            log.debug("Final ExecutionPlan after conversion: conversationId={}, executionPlan={}",
+                    conversationId, result.executionPlan());
 
             var latencyMs = elapsedMillis(startNanos);
             log.debug("Gemini planner call completed successfully: conversationId={}, attempt={}, latencyMs={}",

@@ -1,6 +1,7 @@
 package com.aiorchestration.gateway.config;
 
 import com.aiorchestration.gateway.model.PlanGenerationResult;
+import com.aiorchestration.gateway.planner.tool.ResolveRelativeDateTool;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -36,9 +37,12 @@ public class SpringAiConfig {
     }
 
     @Bean
-    public ChatClient chatClient(ChatClient.Builder builder, MessageChatMemoryAdvisor advisor) {
-        log.info("Creating ChatClient bean with default advisors");
-        return builder.defaultAdvisors(advisor).build();
+    public ChatClient chatClient(ChatClient.Builder builder, MessageChatMemoryAdvisor advisor,
+                                 ResolveRelativeDateTool resolveRelativeDateTool) {
+        log.info("Creating ChatClient bean with default advisors and resolveRelativeDate tool");
+        return builder.defaultAdvisors(advisor)
+                .defaultTools(resolveRelativeDateTool)
+                .build();
     }
 
     @Bean

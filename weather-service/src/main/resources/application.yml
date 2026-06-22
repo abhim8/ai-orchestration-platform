@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: weather-service
+
+http:
+  connect-timeout: ${HTTP_CONNECT_TIMEOUT:10s}
+  read-timeout: ${HTTP_READ_TIMEOUT:15s}
+
 weather:
   forecast:
     max-days-ahead: ${WEATHER_MAX_DAYS_AHEAD:16}

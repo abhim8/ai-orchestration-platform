@@ -8,6 +8,9 @@ ai:
 spring:
   application:
     name: gateway
+  threads:
+    virtual:
+      enabled: true
   ai:
     google:
       genai:
@@ -20,9 +23,21 @@ flight-service:
 weather-service:
   base-url: ${WEATHER_SERVICE_BASE_URL:http://localhost:8082}
 
+http:
+  connect-timeout: ${HTTP_CONNECT_TIMEOUT:10s}
+  read-timeout: ${HTTP_READ_TIMEOUT:15s}
+
+execution:
+  pool:
+    core-size: ${EXECUTION_POOL_CORE_SIZE:4}
+    max-size: ${EXECUTION_POOL_MAX_SIZE:8}
+    queue-capacity: ${EXECUTION_POOL_QUEUE_CAPACITY:50}
+
 chat:
   memory:
     max-messages: ${CHAT_MEMORY_MAX_MESSAGES:30}
+    ttl-minutes: ${CHAT_MEMORY_TTL_MINUTES:30}
+    cleanup-interval-ms: ${CHAT_MEMORY_CLEANUP_INTEVAL:300000}
 
 planning:
   clarification-threshold: ${PLANNING_CLARIFICATION_THRESHOLD:0.5}

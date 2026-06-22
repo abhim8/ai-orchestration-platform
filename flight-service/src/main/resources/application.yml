@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: flight-service
+
+http:
+  connect-timeout: ${HTTP_CONNECT_TIMEOUT:5s}
+  read-timeout: ${HTTP_READ_TIMEOUT:10s}
+
 logging:
   level:
     root: INFO

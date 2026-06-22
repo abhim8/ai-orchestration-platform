@@ -5,17 +5,13 @@ import com.aiorchestration.gateway.model.ExecutionStep;
 import com.aiorchestration.gateway.model.StepResult;
 import com.aiorchestration.gateway.model.StepStatus;
 import com.aiorchestration.gateway.registry.ToolRegistry;
-
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 /**
  * Executes validated execution plans deterministically.
@@ -45,11 +41,14 @@ public class ExecutionEngineService {
 
     private final ToolRegistry toolRegistry;
     private final Map<String, ToolExecutor> toolExecutors;
+    private final Executor executor;
 
     public ExecutionEngineService(final ToolRegistry toolRegistry,
-                                  final Map<String, ToolExecutor> toolExecutors) {
+                                  final Map<String, ToolExecutor> toolExecutors,
+                                  @Qualifier("toolExecutionExecutor") final Executor executor) {
         this.toolRegistry = toolRegistry;
         this.toolExecutors = Collections.unmodifiableMap(toolExecutors);
+        this.executor = executor;
     }
 
     /**
@@ -69,14 +68,14 @@ public class ExecutionEngineService {
 
         for (var step : sorted) {
             if (step.dependsOn().isEmpty()) {
-                futures.put(step.stepId(), CompletableFuture.supplyAsync(() -> executeSingleStep(step)));
+                futures.put(step.stepId(), CompletableFuture.supplyAsync(() -> executeSingleStep(step), executor));
             } else {
                 var depFutures = step.dependsOn().stream()
                         .map(futures::get)
                         .toArray(CompletableFuture[]::new);
                 futures.put(step.stepId(),
                         CompletableFuture.allOf(depFutures)
-                                .thenApplyAsync(v -> executeAfterDependencies(step, futures)));
+                                .thenApplyAsync(v -> executeAfterDependencies(step, futures), executor));
             }
         }
 

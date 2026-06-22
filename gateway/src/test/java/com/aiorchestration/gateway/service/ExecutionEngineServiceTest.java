@@ -13,6 +13,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -22,10 +24,12 @@ class ExecutionEngineServiceTest {
 
     private ToolRegistry toolRegistry;
     private ExecutionEngineService service;
+    private Executor executor;
 
     @BeforeEach
     void setUp() {
         toolRegistry = new ToolRegistry();
+        executor = ForkJoinPool.commonPool();
     }
 
     private static ExecutionStep step(final String stepId, final String tool,
@@ -40,7 +44,7 @@ class ExecutionEngineServiceTest {
     @DisplayName("should execute a single independent step successfully")
     void shouldExecuteSingleIndependentStep() {
         var executors = Map.<String, ToolExecutor>of("flight.search", args -> Map.of("status", "ok"));
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         var steps = List.of(step("1", "flight.search", Map.of("origin", "LHR"), List.of()));
         var results = service.execute(new ExecutionPlan(steps));
@@ -61,7 +65,7 @@ class ExecutionEngineServiceTest {
                 "flight.search", args -> Map.of("status", "ok"),
                 "weather.forecast", args -> Map.of("temp", 25)
         );
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         var steps = List.of(
                 step("1", "flight.search", Map.of(), List.of()),
@@ -96,7 +100,7 @@ class ExecutionEngineServiceTest {
                     return "done";
                 }
         );
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         var steps = List.of(
                 step("1", "flight.search", Map.of(), List.of()),
@@ -128,7 +132,7 @@ class ExecutionEngineServiceTest {
                     return "done";
                 }
         );
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         // 1 -> 2
         var steps = List.of(
@@ -160,7 +164,7 @@ class ExecutionEngineServiceTest {
                     return "done";
                 }
         );
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         //   1
         //  / \
@@ -197,7 +201,7 @@ class ExecutionEngineServiceTest {
                 },
                 "weather.forecast", args -> "done"
         );
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         // 1 (fails)    2 (succeeds)
         // no dependency between them
@@ -222,7 +226,7 @@ class ExecutionEngineServiceTest {
                 "flight.search", args -> { throw new RuntimeException("Search error"); },
                 "weather.forecast", args -> "done"
         );
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         // 1 (fails) -> 2 (should be skipped)
         var steps = List.of(
@@ -245,7 +249,7 @@ class ExecutionEngineServiceTest {
                 "flight.search", args -> { throw new RuntimeException("Error"); },
                 "weather.forecast", args -> "done"
         );
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         // 1 (fails) -> 2 -> 3
         var steps = List.of(
@@ -273,7 +277,7 @@ class ExecutionEngineServiceTest {
                     return "done";
                 }
         );
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         var steps = List.of(step("1", "flight.search", Map.of(), List.of()));
         var results = service.execute(new ExecutionPlan(steps));
@@ -289,7 +293,7 @@ class ExecutionEngineServiceTest {
                 "flight.search", args -> { throw new RuntimeException("fail"); },
                 "weather.forecast", args -> "done"
         );
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         var steps = List.of(
                 step("1", "flight.search", Map.of(), List.of()),
@@ -312,7 +316,7 @@ class ExecutionEngineServiceTest {
                 },
                 "weather.forecast", args -> "done"
         );
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         // Reverse order of declaration but 2 depends on 1
         var steps = List.of(
@@ -341,7 +345,7 @@ class ExecutionEngineServiceTest {
         };
 
         var executors = Map.<String, ToolExecutor>of("flight.search", exec);
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         // Linear chain of 100 steps: 1 -> 2 -> 3 -> ... -> 100
         var steps = new ArrayList<ExecutionStep>();
@@ -363,7 +367,7 @@ class ExecutionEngineServiceTest {
     void shouldFailOnMissingExecutor() {
         // tool exists in registry but no executor registered
         var executors = Map.<String, ToolExecutor>of();
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         var steps = List.of(step("1", "flight.search", Map.of(), List.of()));
         var results = service.execute(new ExecutionPlan(steps));
@@ -376,7 +380,7 @@ class ExecutionEngineServiceTest {
     @DisplayName("should handle unknown tool gracefully")
     void shouldHandleUnknownTool() {
         var executors = Map.<String, ToolExecutor>of();
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         var steps = List.of(step("1", "nonexistent.tool", Map.of(), List.of()));
         var results = service.execute(new ExecutionPlan(steps));
@@ -396,7 +400,7 @@ class ExecutionEngineServiceTest {
                     return "done";
                 }
         );
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         //     1
         //   / | \
@@ -426,7 +430,7 @@ class ExecutionEngineServiceTest {
                     return "done";
                 }
         );
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         //   1
         //  / \
@@ -458,7 +462,7 @@ class ExecutionEngineServiceTest {
                     return "done";
                 }
         );
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         // 1 -> 2    and    3 -> 4   (independent chains)
         var steps = List.of(
@@ -484,7 +488,7 @@ class ExecutionEngineServiceTest {
         var executors = Map.<String, ToolExecutor>of(
                 "flight.search", args -> { throw new RuntimeException("Connection timeout"); }
         );
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         var steps = List.of(step("1", "flight.search", Map.of(), List.of()));
         var results = service.execute(new ExecutionPlan(steps));
@@ -499,7 +503,7 @@ class ExecutionEngineServiceTest {
         var executors = Map.<String, ToolExecutor>of(
                 "flight.search", args -> Map.of("flights", List.of("AA123"))
         );
-        service = new ExecutionEngineService(toolRegistry, executors);
+        service = new ExecutionEngineService(toolRegistry, executors, executor);
 
         var steps = List.of(step("1", "flight.search", Map.of(), List.of()));
         var results = service.execute(new ExecutionPlan(steps));

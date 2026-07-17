@@ -1,3 +1,9 @@
+![Java](https://img.shields.io/badge/Java-23-orange)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0.7-brightgreen)
+![Spring AI](https://img.shields.io/badge/Spring_AI-2.0.0-blue)
+![Google Gemini](https://img.shields.io/badge/Google_Gemini-gemini--2.5--flash--lite-purple)
+![Virtual Threads](https://img.shields.io/badge/Virtual_Threads-Enabled-blueviolet)
+
 # Gateway
 
 The central entry point for the AI Orchestration Platform. Accepts natural language requests and coordinates AI planning, validation, execution, and response aggregation.
@@ -5,20 +11,32 @@ The central entry point for the AI Orchestration Platform. Accepts natural langu
 ## Responsibilities
 
 - Expose `POST /api/v1/chat` as the sole public endpoint
-- Manage conversation context and chat memory
+- Manage conversation context and chat memory (`MessageWindowChatMemory` with TTL-based eviction)
 - Generate execution plans via Google Gemini (AI mode) or keyword matching (deterministic fallback)
 - Validate plans for confidence, tool existence, argument completeness, and DAG correctness
 - Execute plans by calling downstream services in dependency order
-- Aggregate step results into a structured response
+- Aggregate step results into a structured `ChatResponse`
 
 ## Planning Flow
 
-```
-User message
-    → IntentPlannerService.plan()       # Call Gemini with planning prompt
-    → ExecutionPlanValidator.validate()  # Check confidence, tools, arguments, cycles
-    → ExecutionEngineService.execute()   # Topological sort + parallel execution
-    → ResponseAggregatorService.aggregate() # Combine results
+```mermaid
+graph LR
+    Request["HTTP Request"] --> Controller["ChatController"]
+    Controller --> Memory["MessageWindowChatMemory"]
+    Controller --> Planner["IntentPlannerService"]
+
+    Planner --> Choice{"AI_PLANNER_ENABLED"}
+    Choice -->|true| Gemini["Google Gemini<br/>ChatClient + tools"]
+    Choice -->|false| Fallback["DeterministicExecutionPlanFactory"]
+
+    Gemini --> Plan["ExecutionPlan"]
+    Fallback --> Plan
+
+    Plan --> Validator["ExecutionPlanValidator"]
+    Validator --> Engine["ExecutionEngineService"]
+    Engine --> Registry["ToolRegistry"]
+    Engine --> Aggregator["ResponseAggregatorService"]
+    Aggregator --> Response["ChatResponse"]
 ```
 
 ## Key Components
@@ -40,19 +58,19 @@ User message
 
 ## Spring AI Integration
 
-- `ChatClient` configured with `MessageChatMemoryAdvisor` for multi-turn conversation context
-- `ResolveRelativeDateTool` registered as a Gemini `@Tool` for resolving relative dates during planning
-- `BeanOutputConverter<PlanGenerationResult>` for structured JSON parsing
-- `MessageWindowChatMemory` with TTL-based eviction wrapper
+| Component | Purpose |
+|-----------|---------|
+| `ChatClient` | Configured with `MessageChatMemoryAdvisor` for multi-turn conversation context |
+| `ResolveRelativeDateTool` | Registered as a Gemini `@Tool` for resolving relative dates during planning |
+| `BeanOutputConverter<PlanGenerationResult>` | Parses Gemini's structured JSON response into a typed plan |
+| `MessageWindowChatMemory` | In-memory chat history with configurable max messages and TTL-based eviction |
 
-## Planner Feature Flag
+## Configuration
 
-The AI planner can be disabled via:
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AI_PLANNER_ENABLED` | `true` | Enable AI planner; when `false`, uses keyword-based fallback |
+| `GEMINI_API_KEY` | - | Google Gemini API key (required when AI planner is enabled) |
+| `GEMINI_MODEL` | `gemini-2.5-flash-lite` | Gemini model name |
 
-```yaml
-ai:
-  planner:
-    enabled: false   # default: true
-```
-
-When disabled, `DeterministicExecutionPlanFactory` handles requests using keyword matching (detects "flight" and "weather" keywords) and returns hardcoded plans.
+When AI planner is disabled, the `DeterministicExecutionPlanFactory` handles requests using keyword matching (detects "flight" and "weather" keywords) and returns hardcoded plans. This mode requires no API key.

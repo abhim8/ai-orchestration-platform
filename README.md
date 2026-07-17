@@ -1,49 +1,102 @@
+![Java](https://img.shields.io/badge/Java-23-orange)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0.7-brightgreen)
+![Spring AI](https://img.shields.io/badge/Spring_AI-2.0.0-blue)
+![Google Gemini](https://img.shields.io/badge/Google_Gemini-gemini--2.5--flash--lite-purple)
+![License](https://img.shields.io/badge/License-Apache_2.0-green)
+![Build](https://github.com/abhim8/ai-orchestration-platform/actions/workflows/build.yml/badge.svg)
+![Maven](https://img.shields.io/badge/Maven-3.9+-C71A36)
+![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0-85EA2D)
+![Virtual Threads](https://img.shields.io/badge/Virtual_Threads-Enabled-blueviolet)
+
 # AI Orchestration Platform
 
-An AI-powered orchestration platform that accepts natural language requests, plans multi-step workflows using Google Gemini, executes them across downstream services in parallel, and aggregates the results.
+Natural language interface for multi-step tool orchestration. Accepts plain-text requests, plans workflows using Google Gemini, executes them across downstream services, and aggregates results.
+
+## Project Overview
+
+The AI Orchestration Platform translates natural language into structured execution plans. A user types "Book a flight from Bangalore to Tokyo tomorrow and check the weather" - the platform resolves relative dates, generates a validated dependency DAG, executes independent steps in parallel, and returns a consolidated response.
+
+**Responsibilities**
+
+- Expose `POST /api/v1/chat` as the sole public endpoint
+- Generate execution plans from natural language via Google Gemini or keyword-based fallback
+- Validate plans for confidence, tool existence, argument completeness, and graph correctness
+- Execute tool steps in dependency order with parallel execution of independent branches
+- Aggregate step results into a structured response
+- Maintain multi-turn conversation memory with TTL-based eviction
+- Propagate trace context (`X-Trace-Id`) across all services
+
+**Deliberately out of scope**
+
+- Authentication and authorization - no user identity layer is implemented
+- Streaming responses - all responses are synchronous JSON
+- Persistent storage - conversation state is in-memory and lost on restart
+- Third-party flight provider integration - flight data is deterministic mock data by design
+
+## Key Features
+
+- **AI planning** - Google Gemini generates execution plans from natural language
+- **Deterministic fallback** - keyword-based planning when the AI planner is disabled
+- **Tool orchestration** - flight search and weather forecast tools with extensible registry
+- **Conversation memory** - multi-turn chat with `MessageWindowChatMemory` and TTL-based eviction
+- **Relative date resolution** - Gemini resolves "today", "tomorrow", "next Friday" during planning
+- **Execution DAG** - steps declare dependencies; the engine topologically sorts and respects the graph
+- **Parallel execution** - independent steps run concurrently via `CompletableFuture` and `ThreadPoolTaskExecutor`
+- **Plan validation** - 8 validation rules: confidence threshold, tool existence, argument completeness, cycle detection, and more
+- **Structured logging** - Log4j2 JSON layout with trace and conversation IDs
+- **Virtual threads** - Spring Boot virtual threads enabled on the gateway
+- **Trace propagation** - `X-Trace-Id` header propagated across all services
+- **Graceful shutdown** - all services drain in-flight requests before stopping
 
 ## Architecture
 
 ```mermaid
 graph TB
     Client["Client"]
-    Gateway["Gateway :8005"]
-    Planner["Planner"]
-    Gemini["Google Gemini"]
-    Validator["Plan Validator"]
-    Engine["Execution Engine"]
-    Aggregator["Aggregator"]
-    Flight["Flight Service :8006"]
-    Weather["Weather Service :8007"]
-    OpenMeteo["Open-Meteo API"]
-    Mock["Mock Data"]
 
-    Client -->|POST /api/v1/chat| Gateway
-    Gateway --> Planner
-    Planner -->|"plan()"| Gemini
-    Gemini -->|PlanGenerationResult| Planner
-    Planner -->|validate| Validator
-    Validator -->|execute| Engine
+    subgraph Gateway[":8005"]
+        Controller["ChatController"]
+        Planner["IntentPlannerService"]
+        Fallback["DeterministicExecutionPlanFactory"]
+        Validator["ExecutionPlanValidator"]
+        Engine["ExecutionEngineService"]
+        Registry["ToolRegistry"]
+        Aggregator["ResponseAggregatorService"]
+        Memory["MessageWindowChatMemory"]
+    end
+
+    subgraph AI[" "]
+        Gemini["Google Gemini<br/>gemini-2.5-flash-lite"]
+    end
+
+    subgraph Services[" "]
+        Flight["Flight Service :8006"]
+        Weather["Weather Service :8007"]
+    end
+
+    subgraph Data[" "]
+        OpenMeteo["Open-Meteo API"]
+        MockData["Mock Data"]
+    end
+
+    Client -->|POST /api/v1/chat| Controller
+    Controller --> Memory
+    Controller --> Planner
+    Planner -->|AI enabled| Gemini
+    Planner -->|AI disabled| Fallback
+    Planner -->|plan| Validator
+    Validator -->|valid| Engine
+    Registry --> Engine
     Engine -->|flight.search| Flight
     Engine -->|weather.forecast| Weather
-    Engine -->|aggregates| Aggregator
-    Flight -->|mocked| Mock
+    Flight -->|mocked| MockData
     Weather --> OpenMeteo
-    Aggregator -->|response| Gateway
-    Gateway -->|ChatResponse| Client
-
+    Engine --> Aggregator
+    Aggregator --> Controller
+    Controller --> Client
 ```
 
-## How It Works
-
-1. **Client** sends a natural language request to the gateway (e.g. "Book a flight from Bangalore to Tokyo tomorrow and check the weather").
-2. **Planner** sends the request to Google Gemini with a structured prompt. Gemini returns an `ExecutionPlan` containing ordered steps with tool calls and arguments.
-3. **Validator** checks confidence, tool existence, argument completeness, and dependency graph validity.
-4. **Execution Engine** topologically sorts the DAG and executes independent steps concurrently via `CompletableFuture` + `ThreadPoolTaskExecutor`.
-5. **Downstream services** (`flight-service`, `weather-service`) handle individual tool requests.
-6. **Aggregator** combines all step results into a structured response with per-step status and latency.
-
-When the AI planner is disabled, a deterministic fallback factory creates a hardcoded plan based on keyword matching.
+The gateway owns all orchestration logic. Downstream services are thin - they validate inputs and return data. The gateway never duplicates service-level validation or data access.
 
 ## Request Lifecycle
 
@@ -51,7 +104,7 @@ When the AI planner is disabled, a deterministic fallback factory creates a hard
 sequenceDiagram
     actor Client
     participant Gateway
-    participant Planner as IntentPlanner
+    participant Planner as IntentPlannerService
     participant Gemini as Google Gemini
     participant Validator as PlanValidator
     participant Engine as ExecutionEngine
@@ -60,42 +113,58 @@ sequenceDiagram
     participant OM as Open-Meteo
 
     Client->>Gateway: POST /api/v1/chat {"message":"..."}
-    Gateway->>Planner: plan(conversationId, message)
-    Planner->>Gemini: ChatClient.prompt() with tools
-    Gemini-->>Planner: PlanGenerationResult (JSON)
-    Planner-->>Gateway: PlanGenerationResult
-    Gateway->>Validator: validate(plan)
-    Validator-->>Gateway: valid / PlanValidationException
-    Gateway->>Engine: execute(executionPlan)
-    Engine->>Engine: topological sort (Kahn's)
+    activate Gateway
+
+    Gateway->>Gateway: 1. Resolve conversation ID
+    Gateway->>Gateway: 2. Load chat memory
+
+    Gateway->>Planner: 3. plan(conversationId, message)
+    alt AI enabled
+        Planner->>Gemini: ChatClient.prompt() with tools + relative date resolver
+        Gemini-->>Planner: PlanGenerationResult (structured JSON)
+    else AI disabled
+        Planner->>Planner: Keyword-based fallback plan
+    end
+    Planner-->>Gateway: ExecutionPlan
+
+    Gateway->>Validator: 4. validate(plan)
+    alt Invalid plan
+        Gateway-->>Client: PlanValidationException (400)
+    end
+    Validator-->>Gateway: valid
+
+    Gateway->>Engine: 5. execute(executionPlan)
+    Engine->>Engine: 5a. Topological sort (Kahn's algorithm)
+    Engine->>Engine: 5b. Build dependency DAG
+
     par flight.search
         Engine->>Flight: GET /api/v1/flights/search
         Flight-->>Engine: FlightSearchResponse
     and weather.forecast
         Engine->>Weather: GET /api/v1/weather/forecast
-        Weather->>OM: Open-Meteo API
+        Weather->>OM: Geocoding API + Forecast API
         OM-->>Weather: forecast data
         Weather-->>Engine: WeatherForecastResponse
     end
-    Engine-->>Gateway: List of StepResult
-    Gateway->>Gateway: ResponseAggregatorService.aggregate()
-    Gateway-->>Client: ChatResponse
+
+    Engine-->>Gateway: 6. List of StepResult
+    Gateway->>Gateway: 7. ResponseAggregatorService.aggregate()
+    Gateway-->>Client: ChatResponse (JSON)
+    deactivate Gateway
 ```
 
-## Features
-
-- **AI planning** - Google Gemini generates execution plans from natural language
-- **Deterministic fallback** - keyword-based planning when AI planner is disabled
-- **Tool orchestration** - flight search and weather forecast tools
-- **Conversation memory** - multi-turn chat with TTL-based conversation eviction
-- **Relative date resolution** - Gemini can resolve "today", "tomorrow", "next Friday" during planning
-- **Execution DAG** - steps can declare dependencies; the engine respects the dependency graph
-- **Parallel execution** - independent steps run concurrently
-- **Plan validation** - confidence threshold, tool existence, argument completeness, cycle detection
-- **Structured logging** - Log4j2 JSON layout with trace and conversation IDs
-- **Virtual threads** - Spring Boot virtual threads enabled
-- **Trace propagation** - `X-Trace-Id` header across all services
-- **Configuration** - fully externalized via environment variables
+| Phase | Action | Error |
+|-------|--------|-------|
+| 1 | Resolve or create `X-Conversation-Id` | - |
+| 2 | Load chat history from `MessageWindowChatMemory` | - |
+| 3 | Call planner: Gemini or deterministic fallback | - |
+| 3a | Gemini resolves relative dates via `ResolveRelativeDateTool` | - |
+| 3b | Gemini returns structured `PlanGenerationResult` via `BeanOutputConverter` | - |
+| 4 | Validate: confidence, tool existence, arguments, cycles | `PlanValidationException` (400) |
+| 5 | Topological sort (Kahn's) + dependency DAG | - |
+| 5a | Execute independent steps concurrently | - |
+| 6 | Collect `StepResult` from each tool | - |
+| 7 | Aggregate results into `ChatResponse` with per-step status and latency | - |
 
 ## Design Principles
 
@@ -109,34 +178,51 @@ Each concern is owned by exactly one component:
 
 ## Technology Stack
 
-| Category | Technology |
-|----------|-----------|
+| Layer | Technology |
+|-------|-----------|
 | Language | Java 23 |
 | Framework | Spring Boot 4.0.7 |
-| AI SDK | Spring AI 2.0.0 (Google GenAI) |
+| AI SDK | Spring AI 2.0.0 (Google GenAI starter) |
 | LLM | Google Gemini (default: `gemini-2.5-flash-lite`) |
-| HTTP Client | Spring `RestClient` using `java.net.http.HttpClient` |
-| Concurrency | `CompletableFuture` + `ThreadPoolTaskExecutor` |
+| Concurrency | `CompletableFuture` + `ThreadPoolTaskExecutor` + Virtual Threads (gateway) |
+| HTTP Client | Spring `RestClient` backed by `java.net.http.HttpClient` |
 | Validation | Jakarta Bean Validation |
-| Logging | Log4j2 with JSON template layout |
-| Build | Apache Maven (multi-module) |
+| Logging | Log4j 2.x with JSON template layout |
+| API Docs | SpringDoc OpenAPI 3.0.0 (disabled by default) |
+| Build | Apache Maven 3.9+ (multi-module) |
 | Monitoring | Spring Boot Actuator (health, info, metrics) |
-| API Docs | SpringDoc OpenAPI 3.0.0 |
 | External APIs | Open-Meteo (free weather, no auth required) |
 
-## Prerequisites
+## Repository Structure
 
-- JDK 23 (Temurin recommended)
-- Apache Maven 3.9+
-- Google Gemini API key
+```
+ai-orchestration-platform/
+├── pom.xml                    # Parent POM (Spring Boot 4.0.7, Java 23)
+├── platform-common/           # Shared library (error DTOs, trace filter)
+├── gateway/                   # API gateway, planner, execution engine
+├── flight-service/            # Flight search microservice
+└── weather-service/           # Weather forecast microservice
+```
 
-## Environment Variables
+| Module | Type | Port | Responsibility |
+|--------|------|------|----------------|
+| `platform-common` | JAR | - | Shared infrastructure: `TraceIdFilter`, `ErrorResponse` DTO, `ConversationContext` (MDC), `Headers` constants. No Spring Boot dependency - a lightweight library used by all services. |
+| `gateway` | Spring Boot | 8005 | API entry point. Houses the chat controller, AI planner (`IntentPlannerService`), deterministic fallback, plan validator, execution engine, downstream HTTP clients (`FlightClient`, `WeatherClient`), response aggregator, chat memory, and all tool/planner configuration. |
+| `flight-service` | Spring Boot | 8006 | Flight search microservice. Input validation, mocked `AmadeusClient`, structured error handling. Uses deterministic mock data - see note below. |
+| `weather-service` | Spring Boot | 8007 | Weather forecast microservice. Real Open-Meteo integration via geocoding + forecast APIs, date constraint validation, WMO code mapping. |
+
+The flight-service uses deterministic mock data by design. This project focuses on demonstrating AI orchestration, planning, and Spring AI integration rather than integrating with third-party flight providers. Real providers such as Amadeus can be integrated with minimal architectural changes - the `RestClient.Builder` bean is already wired and ready.
+
+## Configuration
+
+All services follow Spring Boot's standard precedence: environment variables override `application.yml`.
 
 | Variable | Default | Description | Service |
 |----------|---------|-------------|---------|
 | `GEMINI_API_KEY` | - | Google Gemini API key (required) | gateway |
 | `GEMINI_MODEL` | `gemini-2.5-flash-lite` | Gemini model name | gateway |
-| `AI_PLANNER_ENABLED` | `true` | Enable/disable AI planner | gateway |
+| `AI_PLANNER_ENABLED` | `true` | Enable AI planner; when `false`, uses keyword-based fallback | gateway |
+| `SERVER_PORT` | `8005` | HTTP listen port | gateway |
 | `FLIGHT_SERVICE_BASE_URL` | `http://localhost:8006` | Flight service base URL | gateway |
 | `WEATHER_SERVICE_BASE_URL` | `http://localhost:8007` | Weather service base URL | gateway |
 | `HTTP_CONNECT_TIMEOUT` | `10s` | Downstream HTTP connect timeout | gateway |
@@ -144,25 +230,41 @@ Each concern is owned by exactly one component:
 | `EXECUTION_POOL_CORE_SIZE` | `4` | Thread pool core size | gateway |
 | `EXECUTION_POOL_MAX_SIZE` | `8` | Thread pool max size | gateway |
 | `EXECUTION_POOL_QUEUE_CAPACITY` | `50` | Thread pool queue capacity | gateway |
-| `CHAT_MEMORY_MAX_MESSAGES` | `30` | Max messages per conversation | gateway |
-| `CHAT_MEMORY_TTL_MINUTES` | `30` | Conversation idle TTL (minutes) | gateway |
-| `CHAT_MEMORY_CLEANUP_INTEVAL` | `300000` | Stale conversation cleanup interval (ms) | gateway |
-| `PLANNING_CLARIFICATION_THRESHOLD` | `0.5` | Minimum confidence for execution | gateway |
+| `CHAT_MEMORY_MAX_MESSAGES` | `30` | Max messages retained per conversation | gateway |
+| `CHAT_MEMORY_TTL_MINUTES` | `30` | Conversation idle time-to-live (minutes) | gateway |
+| `CHAT_MEMORY_CLEANUP_INTERVAL` | `300000` | Stale conversation cleanup interval (ms) | gateway |
+| `PLANNING_CLARIFICATION_THRESHOLD` | `0.5` | Minimum confidence to execute plan | gateway |
 | `PLANNING_MINIMUM_CONFIDENCE` | `0.5` | Minimum plan confidence threshold | gateway |
+| `SERVER_PORT` | `8006` | HTTP listen port | flight-service |
+| `HTTP_CONNECT_TIMEOUT` | `5s` | Downstream HTTP connect timeout | flight-service |
+| `HTTP_READ_TIMEOUT` | `10s` | Downstream HTTP read timeout | flight-service |
+| `SERVER_PORT` | `8007` | HTTP listen port | weather-service |
+| `HTTP_CONNECT_TIMEOUT` | `10s` | Downstream HTTP connect timeout | weather-service |
+| `HTTP_READ_TIMEOUT` | `15s` | Downstream HTTP read timeout | weather-service |
 | `WEATHER_MAX_DAYS_AHEAD` | `16` | Max forecast days from today | weather-service |
 | `OPEN_METEO_GEOCODING_URL` | `https://geocoding-api.open-meteo.com/v1/search` | Open-Meteo geocoding endpoint | weather-service |
 | `OPEN_METEO_FORECAST_URL` | `https://api.open-meteo.com/v1/forecast` | Open-Meteo forecast endpoint | weather-service |
 
 ## Running Locally
 
-Set your Gemini API key and build the project:
+**Prerequisites**
+
+- JDK 23 (Temurin recommended)
+- Apache Maven 3.9+
+- Google Gemini API key
+
+**Build**
 
 ```bash
 export GEMINI_API_KEY=your-key-here
 mvn clean install -DskipTests
 ```
 
-Start each service in a separate terminal (flight-service and weather-service can start in any order; gateway requires both to be running):
+Every push and pull request is automatically built via GitHub Actions - no pre-submit checks required beyond `mvn clean verify`.
+
+**Run**
+
+Start each service in a separate terminal. Flight and weather services can start in any order; the gateway requires both to be running.
 
 ```bash
 # Terminal 1 - flight-service (port 8006)
@@ -175,13 +277,19 @@ mvn spring-boot:run -pl weather-service
 mvn spring-boot:run -pl gateway
 ```
 
-| Service | Port | Default Base URL |
-|---------|------|------------------|
-| Gateway | 8005 | - |
+| Service | Port | Base URL |
+|---------|------|----------|
+| Gateway | 8005 | `http://localhost:8005` |
 | Flight Service | 8006 | `http://localhost:8006` |
 | Weather Service | 8007 | `http://localhost:8007` |
 
-## Example API Request
+**Run tests**
+
+```bash
+mvn clean verify
+```
+
+## API Example
 
 ```bash
 curl -X POST http://localhost:8005/api/v1/chat \
@@ -190,7 +298,7 @@ curl -X POST http://localhost:8005/api/v1/chat \
   -d '{"message": "Book a flight from BLR to NRT tomorrow and check the weather in Tokyo"}'
 ```
 
-### Example Response
+### Response
 
 ```json
 {
@@ -261,26 +369,6 @@ curl -X POST http://localhost:8005/api/v1/chat \
 }
 ```
 
-## Repository Modules
-
-```
-ai-orchestration-platform/
-├── pom.xml                  # Parent POM (Spring Boot 4.0.7, Java 23)
-├── platform-common/         # Shared library
-├── gateway/                 # API gateway, planner, execution engine
-├── flight-service/          # Flight search service
-└── weather-service/         # Weather forecast service
-```
-
-| Module | Type | Responsibility |
-|--------|------|----------------|
-| `platform-common` | JAR | Shared infrastructure: `TraceIdFilter`, `ErrorResponse` DTO, `ConversationContext` (MDC), `Headers` constants. Has no Spring Boot dependency - a lightweight library used by all services. |
-| `gateway` | Spring Boot (port 8005) | API entry point. Houses the chat controller, AI planner (`IntentPlannerService`), deterministic fallback, plan validator, execution engine, downstream HTTP clients (`FlightClient`, `WeatherClient`), response aggregator, chat memory, and all tool/planner configuration. |
-| `flight-service` | Spring Boot (port 8006) | Flight search microservice. Input validation, mocked `AmadeusClient`, structured error handling. Deterministic mock data - see note below. |
-| `weather-service` | Spring Boot (port 8007) | Weather forecast microservice. Real Open-Meteo integration via geocoding + forecast APIs, date constraint validation, WMO code mapping. |
-
-The flight-service uses deterministic mock data by design. This project focuses on demonstrating AI orchestration, planning, and Spring AI integration rather than integrating with third-party flight providers. Real providers such as Amadeus can be integrated with minimal architectural changes.
-
 ## Documentation
 
 | Resource | Description |
@@ -296,8 +384,9 @@ The flight-service uses deterministic mock data by design. This project focuses 
 
 - Multi-modal input support
 - Streaming responses via SSE
-- Circuit breaker for downstream services
+- Circuit breaker and retry for downstream services
+- Persistent conversation storage
 
 ## License
 
-This project is licensed under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for details.
+[Apache License, Version 2.0](LICENSE)

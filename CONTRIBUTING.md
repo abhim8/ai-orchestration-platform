@@ -19,17 +19,17 @@ Set your Gemini API key:
 export GEMINI_API_KEY=your-api-key-here
 ```
 
-Start each service in its own terminal:
+Start each service in a separate terminal. Flight and weather services can start in any order; the gateway requires both to be running.
 
 ```bash
-# Terminal 1 - gateway (port 8005)
-mvn spring-boot:run -pl gateway
-
-# Terminal 2 - flight-service (port 8006)
+# Terminal 1 - flight-service (port 8006)
 mvn spring-boot:run -pl flight-service
 
-# Terminal 3 - weather-service (port 8007)
+# Terminal 2 - weather-service (port 8007)
 mvn spring-boot:run -pl weather-service
+
+# Terminal 3 - gateway (port 8005)
+mvn spring-boot:run -pl gateway
 ```
 
 The gateway is the only entry point. Send requests to `POST http://localhost:8005/api/v1/chat`.
@@ -81,7 +81,7 @@ Examples:
 
 Types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`.
 
-Scopes: `gateway`, `flight-service`, `weather-service`, `common`, `ci`.
+Scopes: `gateway`, `flight-service`, `weather-service`, `common`, `ci`, `docs`.
 
 ## Pull Request Workflow
 

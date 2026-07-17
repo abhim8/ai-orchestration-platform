@@ -38,7 +38,7 @@ chat:
   memory:
     max-messages: ${CHAT_MEMORY_MAX_MESSAGES:30}
     ttl-minutes: ${CHAT_MEMORY_TTL_MINUTES:30}
-    cleanup-interval-ms: ${CHAT_MEMORY_CLEANUP_INTEVAL:300000}
+    cleanup-interval-ms: ${CHAT_MEMORY_CLEANUP_INTERVAL:300000}
 
 planning:
   clarification-threshold: ${PLANNING_CLARIFICATION_THRESHOLD:0.5}

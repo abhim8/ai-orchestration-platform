@@ -7,14 +7,14 @@ An AI-powered orchestration platform that accepts natural language requests, pla
 ```mermaid
 graph TB
     Client["Client"]
-    Gateway["Gateway :8080"]
+    Gateway["Gateway :8005"]
     Planner["Planner"]
     Gemini["Google Gemini"]
     Validator["Plan Validator"]
     Engine["Execution Engine"]
     Aggregator["Aggregator"]
-    Flight["Flight Service :8081"]
-    Weather["Weather Service :8082"]
+    Flight["Flight Service :8006"]
+    Weather["Weather Service :8007"]
     OpenMeteo["Open-Meteo API"]
     Mock["Mock Data"]
 
@@ -137,8 +137,8 @@ Each concern is owned by exactly one component:
 | `GEMINI_API_KEY` | - | Google Gemini API key (required) | gateway |
 | `GEMINI_MODEL` | `gemini-2.5-flash-lite` | Gemini model name | gateway |
 | `AI_PLANNER_ENABLED` | `true` | Enable/disable AI planner | gateway |
-| `FLIGHT_SERVICE_BASE_URL` | `http://localhost:8081` | Flight service base URL | gateway |
-| `WEATHER_SERVICE_BASE_URL` | `http://localhost:8082` | Weather service base URL | gateway |
+| `FLIGHT_SERVICE_BASE_URL` | `http://localhost:8006` | Flight service base URL | gateway |
+| `WEATHER_SERVICE_BASE_URL` | `http://localhost:8007` | Weather service base URL | gateway |
 | `HTTP_CONNECT_TIMEOUT` | `10s` | Downstream HTTP connect timeout | gateway |
 | `HTTP_READ_TIMEOUT` | `15s` | Downstream HTTP read timeout | gateway |
 | `EXECUTION_POOL_CORE_SIZE` | `4` | Thread pool core size | gateway |
@@ -165,26 +165,26 @@ mvn clean install -DskipTests
 Start each service in a separate terminal (flight-service and weather-service can start in any order; gateway requires both to be running):
 
 ```bash
-# Terminal 1 - flight-service (port 8081)
+# Terminal 1 - flight-service (port 8006)
 mvn spring-boot:run -pl flight-service
 
-# Terminal 2 - weather-service (port 8082)
+# Terminal 2 - weather-service (port 8007)
 mvn spring-boot:run -pl weather-service
 
-# Terminal 3 - gateway (port 8080)
+# Terminal 3 - gateway (port 8005)
 mvn spring-boot:run -pl gateway
 ```
 
 | Service | Port | Default Base URL |
 |---------|------|------------------|
-| Gateway | 8080 | - |
-| Flight Service | 8081 | `http://localhost:8081` |
-| Weather Service | 8082 | `http://localhost:8082` |
+| Gateway | 8005 | - |
+| Flight Service | 8006 | `http://localhost:8006` |
+| Weather Service | 8007 | `http://localhost:8007` |
 
 ## Example API Request
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/chat \
+curl -X POST http://localhost:8005/api/v1/chat \
   -H "Content-Type: application/json" \
   -H "X-Conversation-Id: my-session-1" \
   -d '{"message": "Book a flight from BLR to NRT tomorrow and check the weather in Tokyo"}'
@@ -275,9 +275,9 @@ ai-orchestration-platform/
 | Module | Type | Responsibility |
 |--------|------|----------------|
 | `platform-common` | JAR | Shared infrastructure: `TraceIdFilter`, `ErrorResponse` DTO, `ConversationContext` (MDC), `Headers` constants. Has no Spring Boot dependency - a lightweight library used by all services. |
-| `gateway` | Spring Boot (port 8080) | API entry point. Houses the chat controller, AI planner (`IntentPlannerService`), deterministic fallback, plan validator, execution engine, downstream HTTP clients (`FlightClient`, `WeatherClient`), response aggregator, chat memory, and all tool/planner configuration. |
-| `flight-service` | Spring Boot (port 8081) | Flight search microservice. Input validation, mocked `AmadeusClient`, structured error handling. Deterministic mock data - see note below. |
-| `weather-service` | Spring Boot (port 8082) | Weather forecast microservice. Real Open-Meteo integration via geocoding + forecast APIs, date constraint validation, WMO code mapping. |
+| `gateway` | Spring Boot (port 8005) | API entry point. Houses the chat controller, AI planner (`IntentPlannerService`), deterministic fallback, plan validator, execution engine, downstream HTTP clients (`FlightClient`, `WeatherClient`), response aggregator, chat memory, and all tool/planner configuration. |
+| `flight-service` | Spring Boot (port 8006) | Flight search microservice. Input validation, mocked `AmadeusClient`, structured error handling. Deterministic mock data - see note below. |
+| `weather-service` | Spring Boot (port 8007) | Weather forecast microservice. Real Open-Meteo integration via geocoding + forecast APIs, date constraint validation, WMO code mapping. |
 
 The flight-service uses deterministic mock data by design. This project focuses on demonstrating AI orchestration, planning, and Spring AI integration rather than integrating with third-party flight providers. Real providers such as Amadeus can be integrated with minimal architectural changes.
 

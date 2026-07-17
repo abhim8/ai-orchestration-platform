@@ -43,9 +43,9 @@ class WeatherClientTest {
 
     @BeforeEach
     void setUp() {
-        when(builder.baseUrl("http://localhost:8082")).thenReturn(builder);
+        when(builder.baseUrl("http://localhost:8007")).thenReturn(builder);
         when(builder.build()).thenReturn(restClient);
-        client = new WeatherClient(builder, "http://localhost:8082");
+        client = new WeatherClient(builder, "http://localhost:8007");
     }
 
     @Test

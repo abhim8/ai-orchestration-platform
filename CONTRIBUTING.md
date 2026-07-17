@@ -22,17 +22,17 @@ export GEMINI_API_KEY=your-api-key-here
 Start each service in its own terminal:
 
 ```bash
-# Terminal 1 - gateway (port 8080)
+# Terminal 1 - gateway (port 8005)
 mvn spring-boot:run -pl gateway
 
-# Terminal 2 - flight-service (port 8081)
+# Terminal 2 - flight-service (port 8006)
 mvn spring-boot:run -pl flight-service
 
-# Terminal 3 - weather-service (port 8082)
+# Terminal 3 - weather-service (port 8007)
 mvn spring-boot:run -pl weather-service
 ```
 
-The gateway is the only entry point. Send requests to `POST http://localhost:8080/api/v1/chat`.
+The gateway is the only entry point. Send requests to `POST http://localhost:8005/api/v1/chat`.
 
 ### Building
 

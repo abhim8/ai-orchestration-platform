@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT:8005}
 
 ai:
   planner:
@@ -18,10 +18,10 @@ spring:
         chat:
           model: ${GEMINI_MODEL:gemini-2.5-flash-lite}
 flight-service:
-  base-url: ${FLIGHT_SERVICE_BASE_URL:http://localhost:8081}
+  base-url: ${FLIGHT_SERVICE_BASE_URL:http://localhost:8006}
 
 weather-service:
-  base-url: ${WEATHER_SERVICE_BASE_URL:http://localhost:8082}
+  base-url: ${WEATHER_SERVICE_BASE_URL:http://localhost:8007}
 
 http:
   connect-timeout: ${HTTP_CONNECT_TIMEOUT:10s}

@@ -43,9 +43,9 @@ class FlightClientTest {
 
     @BeforeEach
     void setUp() {
-        when(builder.baseUrl("http://localhost:8081")).thenReturn(builder);
+        when(builder.baseUrl("http://localhost:8006")).thenReturn(builder);
         when(builder.build()).thenReturn(restClient);
-        client = new FlightClient(builder, "http://localhost:8081");
+        client = new FlightClient(builder, "http://localhost:8006");
     }
 
     @Test
